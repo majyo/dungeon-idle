@@ -9,14 +9,16 @@ import { MiningPage } from './pages/MiningPage/MiningPage.tsx';
 import { ShopPage } from './pages/ShopPage/ShopPage.tsx';
 import { InventoryPage } from './pages/InventoryPage/InventoryPage.tsx';
 import { BuildingPage } from './pages/BuildingPage/BuildingPage.tsx';
+import { AdventurerPage } from './pages/AdventurerPage/AdventurerPage.tsx';
 
-type TabId = 'combat' | 'woodcutting' | 'mining' | 'building' | 'shop' | 'inventory';
+type TabId = 'combat' | 'woodcutting' | 'mining' | 'building' | 'adventurer' | 'shop' | 'inventory';
 
 const TABS = [
   { id: 'combat' as const, label: '战斗', icon: '⚔️' },
   { id: 'woodcutting' as const, label: '伐木', icon: '🪓' },
   { id: 'mining' as const, label: '采矿', icon: '⛏️' },
   { id: 'building' as const, label: '建筑', icon: '🏗️' },
+  { id: 'adventurer' as const, label: '冒险者', icon: '🧙' },
   { id: 'shop' as const, label: '商店', icon: '🏪' },
   { id: 'inventory' as const, label: '背包', icon: '🎒' },
 ];
@@ -34,6 +36,9 @@ function renderPage(tabId: TabId) {
     }
     case 'building': {
       return <BuildingPage />;
+    }
+    case 'adventurer': {
+      return <AdventurerPage />;
     }
     case 'shop': {
       return <ShopPage />;

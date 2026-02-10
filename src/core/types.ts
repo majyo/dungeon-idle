@@ -80,6 +80,25 @@ export interface BuildingConstruction {
   endTime: number;
 }
 
+export type AdventurerClass = 'warrior' | 'mage' | 'archer' | 'healer';
+export type AdventurerStatus = 'idle' | 'exploring' | 'fighting' | 'resting';
+export type AdventurerRarity = 'common' | 'uncommon' | 'rare' | 'epic';
+
+export interface Adventurer {
+  id: string;
+  name: string;
+  class: AdventurerClass;
+  rarity: AdventurerRarity;
+  level: number;
+  xp: number;
+  xpToNext: number;
+  hp: number;
+  maxHp: number;
+  attack: number;
+  defense: number;
+  status: AdventurerStatus;
+}
+
 export interface GameState {
   gold: number;
   combat: CombatState;
@@ -90,4 +109,5 @@ export interface GameState {
   miningNodes: MiningNode[];
   buildings: Building[];
   buildingConstruction: BuildingConstruction | null;
+  adventurers: Adventurer[];
 }

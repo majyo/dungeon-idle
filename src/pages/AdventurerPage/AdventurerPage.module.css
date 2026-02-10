@@ -1,0 +1,147 @@
+.page {
+  max-width: 700px;
+}
+
+.page h2 {
+  color: var(--gold);
+  margin-bottom: 20px;
+  font-size: 1.4rem;
+}
+
+.adventurerList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.card {
+  background-color: var(--bg-medium);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.nameSection {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.classIcon {
+  font-size: 1.2rem;
+}
+
+.name {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.level {
+  font-size: 0.85rem;
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.tags {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.tag {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid;
+}
+
+.rarityCommon {
+  color: var(--text-primary);
+  border-color: var(--text-primary);
+}
+
+.rarityUncommon {
+  color: #2ecc71;
+  border-color: #2ecc71;
+}
+
+.rarityRare {
+  color: #3498db;
+  border-color: #3498db;
+}
+
+.rarityEpic {
+  color: #9b59b6;
+  border-color: #9b59b6;
+}
+
+.statusIdle {
+  color: var(--text-secondary);
+  border-color: var(--text-secondary);
+}
+
+.statusExploring {
+  color: var(--gold);
+  border-color: var(--gold);
+}
+
+.statusFighting {
+  color: #e74c3c;
+  border-color: #e74c3c;
+}
+
+.statusResting {
+  color: #2ecc71;
+  border-color: #2ecc71;
+}
+
+.bars {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.barRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.barLabel {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  width: 24px;
+  flex-shrink: 0;
+}
+
+.barTrack {
+  flex: 1;
+}
+
+.stats {
+  display: flex;
+  gap: 16px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.statValue {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.empty {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 40px 0;
+  font-size: 0.95rem;
+}
