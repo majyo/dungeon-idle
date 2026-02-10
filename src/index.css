@@ -1,0 +1,87 @@
+:root {
+  /* 背景色系 */
+  --bg-darkest: #0d0d0f;
+  --bg-dark: #141418;
+  --bg-medium: #1c1c22;
+  --bg-light: #2a2a33;
+  --bg-lighter: #35354a;
+
+  /* 文字色 */
+  --text-primary: #e0ddd4;
+  --text-secondary: #9a9a9a;
+  --text-muted: #666666;
+
+  /* 强调色 */
+  --gold: #c9a84c;
+  --gold-dim: #8a7535;
+  --hp-red: #c0392b;
+  --hp-red-bg: #3d1515;
+  --xp-blue: #3498db;
+  --xp-blue-bg: #152a3d;
+  --coin-color: #f1c40f;
+
+  /* 边框 */
+  --border-color: #2a2a33;
+  --border-highlight: #3a3a4a;
+
+  /* 通用 */
+  --radius: 6px;
+  --sidebar-width: 220px;
+
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: var(--text-primary);
+  background-color: var(--bg-darkest);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-dark);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--bg-lighter);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  outline: none;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}

@@ -1,0 +1,140 @@
+import type { GameState } from './types.ts';
+
+export function createInitialState(): GameState {
+  return {
+    gold: 100,
+    combat: {
+      playerHp: 100,
+      playerMaxHp: 100,
+      playerAttack: 10,
+      enemyName: '哥布林',
+      enemyHp: 30,
+      enemyMaxHp: 30,
+      enemyAttack: 5,
+      enemyGoldReward: 15,
+      enemiesDefeated: 0,
+    },
+    skills: [
+      { id: 'mining', name: '采矿', level: 1, xp: 0, xpToNext: 100 },
+      { id: 'woodcutting', name: '伐木', level: 1, xp: 0, xpToNext: 100 },
+      { id: 'fishing', name: '钓鱼', level: 1, xp: 0, xpToNext: 100 },
+    ],
+    shop: [
+      { id: 'wooden-sword', name: '木剑', description: '简陋但实用的武器', price: 50 },
+      { id: 'leather-armor', name: '皮甲', description: '提供基础防护', price: 80 },
+      { id: 'health-potion', name: '生命药水', description: '恢复少量生命值', price: 25 },
+      { id: 'torch', name: '火把', description: '照亮黑暗的地牢', price: 10 },
+    ],
+    inventory: [
+      { id: 'bread', name: '面包', description: '普通的食物', quantity: 3, type: 'consumable' },
+      { id: 'stone', name: '石头', description: '坚硬的石块', quantity: 5, type: 'material' },
+    ],
+    miningNodes: [
+      {
+        id: 'copper-ore',
+        name: '铜矿石',
+        levelRequired: 1,
+        xpPerMine: 10,
+        mineTime: 2000,
+        item: { id: 'copper', name: '铜矿', description: '常见的金属矿石，用途广泛' },
+      },
+      {
+        id: 'iron-ore',
+        name: '铁矿石',
+        levelRequired: 2,
+        xpPerMine: 18,
+        mineTime: 3000,
+        item: { id: 'iron', name: '铁矿', description: '坚硬的铁矿石，可用于锻造' },
+      },
+      {
+        id: 'silver-ore',
+        name: '银矿石',
+        levelRequired: 4,
+        xpPerMine: 30,
+        mineTime: 4500,
+        item: { id: 'silver', name: '银矿', description: '闪亮的银矿石，价值不菲' },
+      },
+      {
+        id: 'gold-ore',
+        name: '金矿石',
+        levelRequired: 7,
+        xpPerMine: 50,
+        mineTime: 6000,
+        item: { id: 'gold-ore-item', name: '金矿', description: '珍贵的金矿石，极为稀有' },
+      },
+    ],
+    woodcuttingNodes: [
+      {
+        id: 'oak',
+        name: '橡树',
+        levelRequired: 1,
+        xpPerChop: 10,
+        chopTime: 2000,
+        item: { id: 'oak-wood', name: '橡木', description: '常见的木材，用途广泛' },
+      },
+      {
+        id: 'pine',
+        name: '松树',
+        levelRequired: 2,
+        xpPerChop: 18,
+        chopTime: 3000,
+        item: { id: 'pine-wood', name: '松木', description: '带有松香气息的木材' },
+      },
+      {
+        id: 'birch',
+        name: '桦树',
+        levelRequired: 4,
+        xpPerChop: 30,
+        chopTime: 4500,
+        item: { id: 'birch-wood', name: '桦木', description: '质地细腻的白色木材' },
+      },
+      {
+        id: 'redwood',
+        name: '红杉',
+        levelRequired: 7,
+        xpPerChop: 50,
+        chopTime: 6000,
+        item: { id: 'redwood-wood', name: '红杉木', description: '珍贵的红色木材，坚固耐用' },
+      },
+    ],
+    buildings: [
+      {
+        id: 'guild-hall',
+        name: '工会大厅',
+        description: '冒险者们聚集的地方，可以接取任务和组队',
+        level: 0,
+        maxLevel: 3,
+        levels: [
+          { gold: 50, materials: [{ itemId: 'oak-wood', name: '橡木', amount: 5 }, { itemId: 'copper', name: '铜矿', amount: 3 }], time: 3000 },
+          { gold: 120, materials: [{ itemId: 'pine-wood', name: '松木', amount: 10 }, { itemId: 'iron', name: '铁矿', amount: 5 }], time: 4000 },
+          { gold: 300, materials: [{ itemId: 'birch-wood', name: '桦木', amount: 15 }, { itemId: 'silver', name: '银矿', amount: 8 }], time: 5000 },
+        ],
+      },
+      {
+        id: 'tavern',
+        name: '酒馆',
+        description: '提供食物和饮料，恢复冒险者的体力',
+        level: 0,
+        maxLevel: 3,
+        levels: [
+          { gold: 80, materials: [{ itemId: 'oak-wood', name: '橡木', amount: 8 }, { itemId: 'copper', name: '铜矿', amount: 2 }], time: 3500 },
+          { gold: 180, materials: [{ itemId: 'pine-wood', name: '松木', amount: 12 }, { itemId: 'iron', name: '铁矿', amount: 6 }], time: 4500 },
+          { gold: 400, materials: [{ itemId: 'birch-wood', name: '桦木', amount: 20 }, { itemId: 'silver', name: '银矿', amount: 10 }], time: 5500 },
+        ],
+      },
+      {
+        id: 'general-store',
+        name: '杂货店',
+        description: '出售各种日常用品和冒险装备',
+        level: 0,
+        maxLevel: 3,
+        levels: [
+          { gold: 60, materials: [{ itemId: 'oak-wood', name: '橡木', amount: 6 }, { itemId: 'copper', name: '铜矿', amount: 4 }], time: 3000 },
+          { gold: 150, materials: [{ itemId: 'pine-wood', name: '松木', amount: 10 }, { itemId: 'iron', name: '铁矿', amount: 8 }], time: 4000 },
+          { gold: 350, materials: [{ itemId: 'birch-wood', name: '桦木', amount: 18 }, { itemId: 'silver', name: '银矿', amount: 12 }], time: 5000 },
+        ],
+      },
+    ],
+    buildingConstruction: null,
+  };
+}

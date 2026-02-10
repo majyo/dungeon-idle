@@ -1,0 +1,65 @@
+import { useState } from 'react';
+import './App.css';
+import { Layout } from './components/Layout/Layout.tsx';
+import { Sidebar } from './components/Sidebar/Sidebar.tsx';
+import { CombatPage } from './pages/CombatPage/CombatPage.tsx';
+import { WoodcuttingPage } from './pages/WoodcuttingPage/WoodcuttingPage.tsx';
+import { MiningPage } from './pages/MiningPage/MiningPage.tsx';
+
+import { ShopPage } from './pages/ShopPage/ShopPage.tsx';
+import { InventoryPage } from './pages/InventoryPage/InventoryPage.tsx';
+import { BuildingPage } from './pages/BuildingPage/BuildingPage.tsx';
+
+type TabId = 'combat' | 'woodcutting' | 'mining' | 'building' | 'shop' | 'inventory';
+
+const TABS = [
+  { id: 'combat' as const, label: '战斗', icon: '⚔️' },
+  { id: 'woodcutting' as const, label: '伐木', icon: '🪓' },
+  { id: 'mining' as const, label: '采矿', icon: '⛏️' },
+  { id: 'building' as const, label: '建筑', icon: '🏗️' },
+  { id: 'shop' as const, label: '商店', icon: '🏪' },
+  { id: 'inventory' as const, label: '背包', icon: '🎒' },
+];
+
+function renderPage(tabId: TabId) {
+  switch (tabId) {
+    case 'combat': {
+      return <CombatPage />;
+    }
+    case 'woodcutting': {
+      return <WoodcuttingPage />;
+    }
+    case 'mining': {
+      return <MiningPage />;
+    }
+    case 'building': {
+      return <BuildingPage />;
+    }
+    case 'shop': {
+      return <ShopPage />;
+    }
+    case 'inventory': {
+      return <InventoryPage />;
+    }
+  }
+}
+
+function App() {
+  const [activeTab, setActiveTab] = useState<TabId>('combat');
+
+  return (
+    <Layout
+      sidebar={
+        <Sidebar
+          tabs={TABS}
+          activeTab={activeTab}
+          onTabChange={(id) => setActiveTab(id as TabId)}
+        />
+      }
+    >
+      {renderPage(activeTab)}
+    </Layout>
+  );
+}
+
+export default App;

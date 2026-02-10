@@ -1,0 +1,93 @@
+.page {
+  max-width: 700px;
+}
+
+.page h2 {
+  color: var(--gold);
+  margin-bottom: 20px;
+  font-size: 1.4rem;
+}
+
+.nodeList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.nodeCard {
+  background-color: var(--bg-medium);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.nodeHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.nodeName {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.nodeLevel {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.nodeInfo {
+  display: flex;
+  gap: 16px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.mineButton {
+  width: 100%;
+  padding: 8px;
+  background-color: #8e6f3e;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-radius: var(--radius);
+  transition: background-color 0.15s ease;
+}
+
+.mineButton:hover:not(:disabled) {
+  background-color: #a67c52;
+}
+
+.gatherProgress {
+  margin-top: 4px;
+  margin-bottom: 8px;
+}
+
+.skillStatus {
+  margin-top: 20px;
+  background-color: var(--bg-medium);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.skillHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.skillName {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.skillLevel {
+  font-size: 0.85rem;
+  color: var(--xp-blue);
+  font-weight: 600;
+}
