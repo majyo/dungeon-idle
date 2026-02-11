@@ -219,5 +219,6 @@ export function createInitialState(): GameState {
         actionLabel: null,
       },
     ],
+    activityLogs: [],
   };
 }

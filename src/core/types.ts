@@ -118,6 +118,26 @@ export interface TavernFoodStock {
   quantity: number;
 }
 
+/** 活动日志条目 */
+export interface ActivityLog {
+  /** 唯一 ID，用于 React key */
+  id: string;
+  /** Date.now() 时间戳 */
+  timestamp: number;
+  /** 冒险者名字 */
+  adventurerName: string;
+  /** 行动描述（如"外出探索未知区域"） */
+  actionLabel: string;
+  /** 效果数值 */
+  effects: {
+    goldDelta?: number;
+    xpDelta?: number;
+    hpDelta?: number;
+  };
+  /** 是否触发了升级 */
+  levelUp?: boolean;
+}
+
 export interface GameState {
   gold: number;
   combat: CombatState;
@@ -130,4 +150,5 @@ export interface GameState {
   buildingConstruction: BuildingConstruction | null;
   adventurers: Adventurer[];
   tavernFood: TavernFoodStock[];
+  activityLogs: ActivityLog[];
 }
