@@ -1,0 +1,129 @@
+.page {
+  max-width: 700px;
+}
+
+.page h2 {
+  color: var(--gold);
+  margin-bottom: 20px;
+  font-size: 1.4rem;
+}
+
+.card {
+  background-color: var(--bg-medium);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.cardTitle {
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 12px;
+  color: var(--gold);
+}
+
+.goldCurrent {
+  font-size: 0.9rem;
+  color: var(--coin-color);
+  margin-bottom: 10px;
+}
+
+.buttonRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.quickBtn {
+  padding: 6px 14px;
+  background-color: var(--bg-lighter);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.quickBtn:hover {
+  background-color: var(--gold-dim);
+}
+
+/* 材料添加 */
+.materialRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.materialRow select,
+.materialRow input {
+  padding: 6px 8px;
+  background-color: var(--bg-dark);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+}
+
+.materialRow select {
+  flex: 1;
+  min-width: 120px;
+}
+
+.materialRow input {
+  width: 80px;
+}
+
+/* 建筑/技能行 */
+.levelRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.85rem;
+}
+
+.levelRow:last-child {
+  border-bottom: none;
+}
+
+.levelName {
+  flex: 1;
+  font-weight: 600;
+}
+
+.levelCurrent {
+  color: var(--text-secondary);
+  min-width: 50px;
+}
+
+.levelRow select,
+.levelRow input {
+  padding: 4px 6px;
+  background-color: var(--bg-dark);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  width: 70px;
+}
+
+.setBtn {
+  padding: 4px 12px;
+  background-color: #2e7d32;
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.setBtn:hover {
+  background-color: #388e3c;
+}

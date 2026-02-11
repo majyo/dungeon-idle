@@ -1,6 +1,7 @@
 import type { GameState } from './types.ts';
 import { EventEmitter } from './EventEmitter.ts';
 import { createInitialState } from './initialState.ts';
+import { AdventurerAI } from './ai/AdventurerAI.ts';
 
 export class GameStore {
   private static _instance: GameStore | null = null;
@@ -8,10 +9,12 @@ export class GameStore {
   private _state: GameState;
   private _snapshot: GameState;
   private _emitter = new EventEmitter();
+  private _decisionTimer: ReturnType<typeof setInterval> | null = null;
 
   private constructor() {
     this._state = createInitialState();
     this._snapshot = this._state;
+    this.startAdventurerAI();
   }
 
   static get Instance(): GameStore {
@@ -249,5 +252,105 @@ export class GameStore {
 
     this._state.buildingConstruction = null;
     this._notify();
+  }
+
+  startAdventurerAI(): void {
+    if (this._decisionTimer) {
+      return;
+    }
+    this._decisionTimer = setInterval(() => {
+      this._tickAdventurers();
+    }, 1000);
+  }
+
+  stopAdventurerAI(): void {
+    if (this._decisionTimer) {
+      clearInterval(this._decisionTimer);
+      this._decisionTimer = null;
+    }
+  }
+
+  debugAddGold(amount: number): void {
+    this._state.gold += amount;
+    this._notify();
+  }
+
+  debugAddMaterial(itemId: string, name: string, description: string, quantity: number): void {
+    const existing = this._state.inventory.find((item) => item.id === itemId);
+    if (existing) {
+      existing.quantity += quantity;
+      this._state.inventory = this._state.inventory.map((item) =>
+        item.id === itemId ? { ...existing } : item
+      );
+    } else {
+      this._state.inventory = [
+        ...this._state.inventory,
+        { id: itemId, name, description, quantity, type: 'material' as const },
+      ];
+    }
+    this._notify();
+  }
+
+  debugSetBuildingLevel(buildingId: string, level: number): void {
+    this._state.buildings = this._state.buildings.map((b) =>
+      b.id === buildingId ? { ...b, level: Math.min(level, b.maxLevel) } : b
+    );
+    this._notify();
+  }
+
+  debugSetSkillLevel(skillId: string, level: number): void {
+    this._state.skills = this._state.skills.map((s) => {
+      if (s.id !== skillId) {
+        return s;
+      }
+      const xpToNext = Math.floor(100 * Math.pow(1.5, level - 1));
+      return { ...s, level, xp: 0, xpToNext };
+    });
+    this._notify();
+  }
+
+  private _tickAdventurers(): void {
+    const now = Date.now();
+    let changed = false;
+
+    this._state.adventurers = this._state.adventurers.map((adv) => {
+      // 酒馆持续回血：每 tick 恢复一定比例 maxHp
+      if (adv.status === 'resting' && adv.currentBuildingId === 'tavern' && adv.hp < adv.maxHp) {
+        const tavern = this._state.buildings.find((b) => b.id === 'tavern');
+        const tavernLv = tavern ? tavern.level : 0;
+        const healPerTick = Math.max(1, Math.floor(adv.maxHp * (0.05 + tavernLv * 0.03)));
+        const newHp = Math.min(adv.maxHp, adv.hp + healPerTick);
+        if (newHp !== adv.hp) {
+          changed = true;
+          adv = { ...adv, hp: newHp };
+        }
+      }
+
+      // 行动中 → 检查是否到时间
+      if (adv.status !== 'idle' && adv.actionEndTime !== null) {
+        if (now >= adv.actionEndTime) {
+          const result = AdventurerAI.completeAction(adv, this._state);
+          this._state.gold += result.goldDelta;
+          changed = true;
+          return result.adventurer;
+        }
+        return adv;
+      }
+
+      // 空闲 → 选择新行动
+      if (adv.status === 'idle') {
+        const action = AdventurerAI.pickAction(adv, this._state);
+        if (action) {
+          changed = true;
+          return AdventurerAI.startAction(adv, action, this._state);
+        }
+      }
+
+      return adv;
+    });
+
+    if (changed) {
+      this._notify();
+    }
   }
 }

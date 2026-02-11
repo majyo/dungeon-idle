@@ -8,6 +8,7 @@ const CLASS_LABELS: Record<AdventurerClass, string> = {
   mage: '法师',
   archer: '弓箭手',
   healer: '治疗师',
+  priest: '牧师',
 };
 
 const CLASS_ICONS: Record<AdventurerClass, string> = {
@@ -15,6 +16,7 @@ const CLASS_ICONS: Record<AdventurerClass, string> = {
   mage: '🔮',
   archer: '🏹',
   healer: '💚',
+  priest: '✝️',
 };
 
 const STATUS_LABELS: Record<AdventurerStatus, string> = {
@@ -22,6 +24,9 @@ const STATUS_LABELS: Record<AdventurerStatus, string> = {
   exploring: '探索中',
   fighting: '战斗中',
   resting: '休息中',
+  training: '训练中',
+  gathering: '采集中',
+  guarding: '守卫中',
 };
 
 const STATUS_STYLES: Record<AdventurerStatus, string> = {
@@ -29,6 +34,9 @@ const STATUS_STYLES: Record<AdventurerStatus, string> = {
   exploring: styles.statusExploring,
   fighting: styles.statusFighting,
   resting: styles.statusResting,
+  training: styles.statusTraining,
+  gathering: styles.statusGathering,
+  guarding: styles.statusGuarding,
 };
 
 const RARITY_LABELS: Record<AdventurerRarity, string> = {
@@ -47,7 +55,7 @@ const RARITY_STYLES: Record<AdventurerRarity, string> = {
 
 export function AdventurerPage() {
   const state = useGameStore();
-  const { adventurers } = state;
+  const { adventurers, buildings } = state;
 
   if (adventurers.length === 0) {
     return (
@@ -105,6 +113,21 @@ export function AdventurerPage() {
               <span>攻击力 <span className={styles.statValue}>{adv.attack}</span></span>
               <span>防御力 <span className={styles.statValue}>{adv.defense}</span></span>
             </div>
+
+            {adv.actionLabel && (
+              <div className={styles.actionProgress}>
+                <div className={styles.actionLabel}>{adv.actionLabel}</div>
+              </div>
+            )}
+
+            {!adv.actionLabel && adv.currentBuildingId && (() => {
+              const building = buildings.find((b) => b.id === adv.currentBuildingId);
+              return building ? (
+                <div className={styles.location}>
+                  📍 {building.name}
+                </div>
+              ) : null;
+            })()}
           </div>
         ))}
       </div>

@@ -8,6 +8,7 @@ const TICK_INTERVAL = 50;
 export function BuildingPage() {
   const state = useGameStore();
   const construction = state.buildingConstruction;
+  const { adventurers } = state;
 
   const [progress, setProgress] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -130,6 +131,25 @@ export function BuildingPage() {
               >
                 {buttonText}
               </button>
+
+              {building.level >= 1 && (() => {
+                const residents = adventurers.filter(
+                  (a) => a.currentBuildingId === building.id
+                );
+                return residents.length > 0 ? (
+                  <div className={styles.residents}>
+                    {residents.map((a) => (
+                      <span key={a.id} className={styles.residentItem}>
+                        🧙 {a.name}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <div className={styles.residents}>
+                    <span className={styles.residentEmpty}>暂无冒险者驻扎</span>
+                  </div>
+                );
+              })()}
             </div>
           );
         })}

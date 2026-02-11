@@ -103,6 +103,32 @@
   border-color: #2ecc71;
 }
 
+.statusTraining {
+  color: #9b59b6;
+  border-color: #9b59b6;
+}
+
+.statusGathering {
+  color: #27ae60;
+  border-color: #27ae60;
+}
+
+.statusGuarding {
+  color: #e67e22;
+  border-color: #e67e22;
+}
+
+.actionProgress {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color);
+}
+
+.actionLabel {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
 .bars {
   display: flex;
   flex-direction: column;
@@ -137,6 +163,14 @@
 .statValue {
   color: var(--text-primary);
   font-weight: 600;
+}
+
+.location {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color);
+  font-size: 0.82rem;
+  color: var(--gold);
 }
 
 .empty {

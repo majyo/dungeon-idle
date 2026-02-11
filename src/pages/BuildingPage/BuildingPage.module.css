@@ -79,3 +79,25 @@
 .buildButton:hover:not(:disabled) {
   background-color: #388e3c;
 }
+
+.residents {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color);
+}
+
+.residentItem {
+  font-size: 0.82rem;
+  color: var(--text-primary);
+  background-color: var(--bg-dark);
+  padding: 3px 8px;
+  border-radius: var(--radius);
+}
+
+.residentEmpty {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}

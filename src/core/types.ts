@@ -80,8 +80,8 @@ export interface BuildingConstruction {
   endTime: number;
 }
 
-export type AdventurerClass = 'warrior' | 'mage' | 'archer' | 'healer';
-export type AdventurerStatus = 'idle' | 'exploring' | 'fighting' | 'resting';
+export type AdventurerClass = 'warrior' | 'mage' | 'archer' | 'healer' | 'priest';
+export type AdventurerStatus = 'idle' | 'exploring' | 'fighting' | 'resting' | 'training' | 'gathering' | 'guarding';
 export type AdventurerRarity = 'common' | 'uncommon' | 'rare' | 'epic';
 
 export interface Adventurer {
@@ -97,6 +97,11 @@ export interface Adventurer {
   attack: number;
   defense: number;
   status: AdventurerStatus;
+  currentBuildingId: string | null;
+  currentActionId: string | null;
+  actionStartTime: number | null;
+  actionEndTime: number | null;
+  actionLabel: string | null;
 }
 
 export interface GameState {
