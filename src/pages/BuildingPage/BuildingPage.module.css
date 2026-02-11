@@ -101,3 +101,96 @@
   font-size: 0.82rem;
   color: var(--text-secondary);
 }
+
+.foodStock {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.foodStockItem {
+  font-size: 0.82rem;
+  color: var(--text-primary);
+  background-color: var(--bg-dark);
+  padding: 3px 8px;
+  border-radius: var(--radius);
+}
+
+.stockButton {
+  margin-top: 8px;
+  width: 100%;
+  padding: 6px;
+  background-color: var(--bg-light);
+  color: var(--gold);
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1px solid var(--border-highlight);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.stockButton:hover {
+  background-color: var(--bg-lighter);
+}
+
+.stockForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.formGroup label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.formGroup select,
+.formGroup input {
+  padding: 6px 8px;
+  background-color: var(--bg-dark);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+}
+
+.foodInfo {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  background-color: var(--bg-dark);
+  padding: 8px;
+  border-radius: var(--radius);
+}
+
+.confirmButton {
+  width: 100%;
+  padding: 8px;
+  background-color: #2e7d32;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.confirmButton:hover:not(:disabled) {
+  background-color: #388e3c;
+}
+
+.confirmButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

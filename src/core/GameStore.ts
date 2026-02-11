@@ -1,7 +1,7 @@
 import type { GameState } from './types.ts';
 import { EventEmitter } from './EventEmitter.ts';
 import { createInitialState } from './initialState.ts';
-import { AdventurerAI } from './ai/AdventurerAI.ts';
+import { WorldSystem } from './WorldSystem.ts';
 
 export class GameStore {
   private static _instance: GameStore | null = null;
@@ -10,6 +10,7 @@ export class GameStore {
   private _snapshot: GameState;
   private _emitter = new EventEmitter();
   private _decisionTimer: ReturnType<typeof setInterval> | null = null;
+  private _worldSystem = new WorldSystem();
 
   private constructor() {
     this._state = createInitialState();
@@ -254,6 +255,22 @@ export class GameStore {
     this._notify();
   }
 
+  stockTavernFood(foodId: string, quantity: number): void {
+    const existing = this._state.tavernFood.find((f) => f.foodId === foodId);
+    if (existing) {
+      existing.quantity += quantity;
+      this._state.tavernFood = this._state.tavernFood.map((f) =>
+        f.foodId === foodId ? { ...existing } : f
+      );
+    } else {
+      this._state.tavernFood = [
+        ...this._state.tavernFood,
+        { foodId, quantity },
+      ];
+    }
+    this._notify();
+  }
+
   startAdventurerAI(): void {
     if (this._decisionTimer) {
       return;
@@ -310,45 +327,7 @@ export class GameStore {
   }
 
   private _tickAdventurers(): void {
-    const now = Date.now();
-    let changed = false;
-
-    this._state.adventurers = this._state.adventurers.map((adv) => {
-      // 酒馆持续回血：每 tick 恢复一定比例 maxHp
-      if (adv.status === 'resting' && adv.currentBuildingId === 'tavern' && adv.hp < adv.maxHp) {
-        const tavern = this._state.buildings.find((b) => b.id === 'tavern');
-        const tavernLv = tavern ? tavern.level : 0;
-        const healPerTick = Math.max(1, Math.floor(adv.maxHp * (0.05 + tavernLv * 0.03)));
-        const newHp = Math.min(adv.maxHp, adv.hp + healPerTick);
-        if (newHp !== adv.hp) {
-          changed = true;
-          adv = { ...adv, hp: newHp };
-        }
-      }
-
-      // 行动中 → 检查是否到时间
-      if (adv.status !== 'idle' && adv.actionEndTime !== null) {
-        if (now >= adv.actionEndTime) {
-          const result = AdventurerAI.completeAction(adv, this._state);
-          this._state.gold += result.goldDelta;
-          changed = true;
-          return result.adventurer;
-        }
-        return adv;
-      }
-
-      // 空闲 → 选择新行动
-      if (adv.status === 'idle') {
-        const action = AdventurerAI.pickAction(adv, this._state);
-        if (action) {
-          changed = true;
-          return AdventurerAI.startAction(adv, action, this._state);
-        }
-      }
-
-      return adv;
-    });
-
+    const changed = this._worldSystem.tick(this._state);
     if (changed) {
       this._notify();
     }

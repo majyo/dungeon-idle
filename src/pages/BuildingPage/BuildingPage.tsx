@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useGameStore, store } from '../../hooks/useGameStore.ts';
 import { ProgressBar } from '../../components/ProgressBar/ProgressBar.tsx';
+import { Modal } from '../../components/Modal/Modal.tsx';
+import { TAVERN_FOODS, getFoodConfig } from '../../core/foodConfig.ts';
 import styles from './BuildingPage.module.css';
 
 const TICK_INTERVAL = 50;
@@ -11,6 +13,9 @@ export function BuildingPage() {
   const { adventurers } = state;
 
   const [progress, setProgress] = useState(0);
+  const [showFoodModal, setShowFoodModal] = useState(false);
+  const [selectedFoodId, setSelectedFoodId] = useState(TAVERN_FOODS[0]?.id ?? '');
+  const [stockQuantity, setStockQuantity] = useState(10);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const clearTickInterval = useCallback(() => {
@@ -53,6 +58,16 @@ export function BuildingPage() {
     return item ? item.quantity : 0;
   };
 
+  const handleStockFood = () => {
+    if (selectedFoodId && stockQuantity > 0) {
+      store.stockTavernFood(selectedFoodId, stockQuantity);
+      setShowFoodModal(false);
+      setStockQuantity(10);
+    }
+  };
+
+  const selectedFoodConfig = getFoodConfig(selectedFoodId);
+
   return (
     <div className={styles.page}>
       <h2>🏗️ 建筑</h2>
@@ -90,6 +105,12 @@ export function BuildingPage() {
           } else {
             buttonText = building.level === 0 ? '建造' : '升级';
           }
+
+          // 酒馆食物库存
+          const isTavern = building.id === 'tavern' && building.level >= 1;
+          const foodStocks = isTavern
+            ? state.tavernFood.filter((f) => f.quantity > 0)
+            : [];
 
           return (
             <div key={building.id} className={styles.buildingCard}>
@@ -150,10 +171,73 @@ export function BuildingPage() {
                   </div>
                 );
               })()}
+
+              {isTavern && (
+                <>
+                  {foodStocks.length > 0 && (
+                    <div className={styles.foodStock}>
+                      {foodStocks.map((stock) => {
+                        const config = getFoodConfig(stock.foodId);
+                        return config ? (
+                          <span key={stock.foodId} className={styles.foodStockItem}>
+                            🍞 {config.name} x{stock.quantity}
+                          </span>
+                        ) : null;
+                      })}
+                    </div>
+                  )}
+                  <button className={styles.stockButton} onClick={() => { setShowFoodModal(true); }}>
+                    上架食物
+                  </button>
+                </>
+              )}
             </div>
           );
         })}
       </div>
+
+      {showFoodModal && (
+        <Modal title="上架食物" onClose={() => { setShowFoodModal(false); }}>
+          <div className={styles.stockForm}>
+            <div className={styles.formGroup}>
+              <label htmlFor="food-select">食物类型</label>
+              <select
+                id="food-select"
+                value={selectedFoodId}
+                onChange={(e) => { setSelectedFoodId(e.target.value); }}
+              >
+                {TAVERN_FOODS.map((food) => (
+                  <option key={food.id} value={food.id}>{food.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className={styles.formGroup}>
+              <label htmlFor="food-quantity">数量</label>
+              <input
+                id="food-quantity"
+                type="number"
+                min={1}
+                max={999}
+                value={stockQuantity}
+                onChange={(e) => { setStockQuantity(Math.max(1, parseInt(e.target.value) || 1)); }}
+              />
+            </div>
+            {selectedFoodConfig && (
+              <div className={styles.foodInfo}>
+                {selectedFoodConfig.description}<br />
+                回复 {selectedFoodConfig.healAmount} HP · 售价 {selectedFoodConfig.price} 金币
+              </div>
+            )}
+            <button
+              className={styles.confirmButton}
+              disabled={!selectedFoodId || stockQuantity <= 0}
+              onClick={handleStockFood}
+            >
+              确认上架
+            </button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

@@ -112,6 +112,7 @@ export function AdventurerPage() {
             <div className={styles.stats}>
               <span>攻击力 <span className={styles.statValue}>{adv.attack}</span></span>
               <span>防御力 <span className={styles.statValue}>{adv.defense}</span></span>
+              <span>金币 <span className={styles.statValue}>{adv.gold}</span></span>
             </div>
 
             {adv.actionLabel && (

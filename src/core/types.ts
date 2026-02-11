@@ -96,12 +96,26 @@ export interface Adventurer {
   maxHp: number;
   attack: number;
   defense: number;
+  gold: number;
   status: AdventurerStatus;
   currentBuildingId: string | null;
   currentActionId: string | null;
   actionStartTime: number | null;
   actionEndTime: number | null;
   actionLabel: string | null;
+}
+
+export interface TavernFoodConfig {
+  id: string;
+  name: string;
+  description: string;
+  healAmount: number;
+  price: number;
+}
+
+export interface TavernFoodStock {
+  foodId: string;
+  quantity: number;
 }
 
 export interface GameState {
@@ -115,4 +129,5 @@ export interface GameState {
   buildings: Building[];
   buildingConstruction: BuildingConstruction | null;
   adventurers: Adventurer[];
+  tavernFood: TavernFoodStock[];
 }
