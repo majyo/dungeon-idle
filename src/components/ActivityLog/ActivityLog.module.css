@@ -1,11 +1,13 @@
 .panel {
-  height: 180px;
+  width: 280px;
+  height: 100vh;
   overflow-y: auto;
   background-color: var(--bg-medium);
-  border-top: 1px solid var(--border-color);
+  border-left: 1px solid var(--border-color);
   padding: 12px;
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
 }
 
 .title {
@@ -31,9 +33,8 @@
   font-size: 13px;
   color: var(--text-secondary);
   line-height: 1.4;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .timestamp {
@@ -50,8 +51,9 @@
 
 .effects {
   font-size: 12px;
-  display: inline-flex;
+  display: flex;
   gap: 6px;
+  margin-top: 2px;
 }
 
 .goldEffect {

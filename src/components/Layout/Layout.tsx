@@ -11,10 +11,8 @@ export function Layout({ sidebar, children }: LayoutProps) {
   return (
     <div className={styles.container}>
       {sidebar}
-      <main className={styles.content}>
-        <div className={styles.mainContent}>{children}</div>
-        <ActivityLog />
-      </main>
+      <main className={styles.content}>{children}</main>
+      <ActivityLog />
     </div>
   );
 }
