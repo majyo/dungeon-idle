@@ -1,4 +1,4 @@
-import type { Adventurer, GameState } from './types.ts';
+import type { Adventurer, GameState, ActivityLog } from './types.ts';
 import type { ActionContext, ActionDefinition, ActionEffect } from './ai/types.ts';
 import { AdventurerAI } from './ai/AdventurerAI.ts';
 import { ALL_ACTIONS } from './ai/actions.ts';
@@ -118,6 +118,23 @@ export class WorldSystem {
     }
 
     const goldEarned = eff.goldDelta ?? 0;
+
+    // 生成行动完成日志
+    const newLog: ActivityLog = {
+      id: Date.now() + '-' + Math.random().toString(36).substring(2, 9),
+      timestamp: Date.now(),
+      adventurerName: adventurer.name,
+      actionLabel: adventurer.actionLabel || '未知行动',
+      effects: {
+        goldDelta: eff.goldDelta ?? 0,
+        xpDelta: eff.xpDelta ?? 0,
+        hpDelta: eff.hpDelta ?? 0,
+      },
+      levelUp: newLevel > adventurer.level,
+    };
+
+    // 添加到日志列表并截断到最多 100 条
+    state.activityLogs = [...state.activityLogs, newLog].slice(-100);
 
     return {
       adventurer: {
