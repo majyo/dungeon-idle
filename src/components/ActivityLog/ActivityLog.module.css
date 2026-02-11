@@ -1,0 +1,104 @@
+.panel {
+  height: 180px;
+  overflow-y: auto;
+  background-color: var(--bg-medium);
+  border-top: 1px solid var(--border-color);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  position: sticky;
+  top: 0;
+  background-color: var(--bg-medium);
+  z-index: 1;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.logList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.logItem {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+}
+
+.timestamp {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-right: 8px;
+  font-family: monospace;
+  flex-shrink: 0;
+}
+
+.content {
+  margin-right: 6px;
+}
+
+.effects {
+  font-size: 12px;
+  display: inline-flex;
+  gap: 6px;
+}
+
+.goldEffect {
+  color: var(--gold);
+}
+
+.xpEffect {
+  color: var(--xp-blue);
+}
+
+.hpEffect {
+  color: var(--hp-red);
+}
+
+.levelUp {
+  color: var(--gold);
+  font-weight: 600;
+  border-left: 2px solid var(--gold);
+  padding-left: 6px;
+  background-color: rgba(201, 168, 76, 0.1);
+  padding-top: 2px;
+  padding-bottom: 2px;
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+.emptyState {
+  color: var(--text-muted);
+  font-style: italic;
+  text-align: center;
+  margin-top: 40px;
+  font-size: 13px;
+}
+
+/* Custom Scrollbar */
+.panel::-webkit-scrollbar {
+  width: 6px;
+}
+
+.panel::-webkit-scrollbar-track {
+  background: var(--bg-medium);
+}
+
+.panel::-webkit-scrollbar-thumb {
+  background: var(--bg-light);
+  border-radius: 3px;
+}
+
+.panel::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
