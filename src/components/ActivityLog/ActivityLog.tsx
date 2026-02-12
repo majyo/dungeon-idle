@@ -57,7 +57,7 @@ export function ActivityLog() {
                       {effects.goldDelta > 0 ? '+' : ''}{effects.goldDelta} 金币
                     </span>
                   ) : null}
-                  
+
                   {effects.xpDelta ? (
                     <span className={styles.xpEffect}>
                       {effects.xpDelta > 0 ? '+' : ''}{effects.xpDelta} XP
@@ -69,6 +69,10 @@ export function ActivityLog() {
                       HP {effects.hpDelta > 0 ? '+' : ''}{effects.hpDelta}
                     </span>
                   ) : null}
+
+                  {effects.lootName && (
+                    <span className={styles.lootText}>🛡️ {effects.lootName}</span>
+                  )}
                 </span>
               </div>
             );

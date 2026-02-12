@@ -157,6 +157,7 @@ export function createInitialState(): GameState {
         actionStartTime: null,
         actionEndTime: null,
         actionLabel: null,
+        equipment: { weapon: null, armor: null },
       },
       {
         id: 'adventurer-2',
@@ -177,6 +178,7 @@ export function createInitialState(): GameState {
         actionStartTime: null,
         actionEndTime: null,
         actionLabel: null,
+        equipment: { weapon: null, armor: null },
       },
       {
         id: 'adventurer-3',
@@ -197,6 +199,7 @@ export function createInitialState(): GameState {
         actionStartTime: null,
         actionEndTime: null,
         actionLabel: null,
+        equipment: { weapon: null, armor: null },
       },
       {
         id: 'adventurer-4',
@@ -217,8 +220,13 @@ export function createInitialState(): GameState {
         actionStartTime: null,
         actionEndTime: null,
         actionLabel: null,
+        equipment: { weapon: null, armor: null },
       },
     ],
     activityLogs: [],
+    guildHall: {
+      formingParties: [],
+      raidingParties: [],
+    },
   };
 }

@@ -1,10 +1,26 @@
 import type { Adventurer, GameState } from '../types.ts';
 import type { ActionContext, ActionDefinition } from './types.ts';
 import { ALL_ACTIONS } from './actions.ts';
+import { getEquipmentDef } from '../equipmentConfig.ts';
+
+function buildContext(adventurer: Adventurer, state: GameState): ActionContext {
+  let attack = adventurer.attack;
+  let defense = adventurer.defense;
+  let maxHp = adventurer.maxHp;
+  for (const equipId of [adventurer.equipment.weapon, adventurer.equipment.armor]) {
+    if (!equipId) { continue; }
+    const def = getEquipmentDef(equipId);
+    if (!def) { continue; }
+    attack += def.stats.attack ?? 0;
+    defense += def.stats.defense ?? 0;
+    maxHp += def.stats.maxHp ?? 0;
+  }
+  return { adventurer, state, effectiveAttack: attack, effectiveDefense: defense, effectiveMaxHp: maxHp };
+}
 
 export class AdventurerAI {
   static pickAction(adventurer: Adventurer, state: GameState): ActionDefinition | null {
-    const ctx: ActionContext = { adventurer, state };
+    const ctx: ActionContext = buildContext(adventurer, state);
 
     // 过滤可用行动并评分
     const scored: { action: ActionDefinition; score: number }[] = [];

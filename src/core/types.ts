@@ -80,9 +80,48 @@ export interface BuildingConstruction {
   endTime: number;
 }
 
+export type EquipmentSlot = 'weapon' | 'armor';
+
+export interface EquipmentStats {
+  attack?: number;
+  defense?: number;
+  maxHp?: number;
+}
+
+export interface EquipmentDef {
+  id: string;
+  name: string;
+  description: string;
+  slot: EquipmentSlot;
+  stats: EquipmentStats;
+  price: number;
+}
+
+export interface AdventurerEquipment {
+  weapon: string | null;  // EquipmentDef.id
+  armor: string | null;   // EquipmentDef.id
+}
+
 export type AdventurerClass = 'warrior' | 'mage' | 'archer' | 'healer' | 'priest';
-export type AdventurerStatus = 'idle' | 'exploring' | 'fighting' | 'resting' | 'training' | 'gathering' | 'guarding';
+export type AdventurerStatus = 'idle' | 'resting' | 'gathering' | 'working' | 'queuing' | 'raiding';
 export type AdventurerRarity = 'common' | 'uncommon' | 'rare' | 'epic';
+
+export type PartyStatus = 'forming' | 'raiding';
+
+export interface Party {
+  id: string;
+  memberIds: string[];           // 最多4人
+  status: PartyStatus;
+  createdAt: number;
+  formingDeadline: number;       // 创建后60秒
+  raidStartTime: number | null;
+  raidEndTime: number | null;    // 开始后20秒
+}
+
+export interface GuildHallState {
+  formingParties: Party[];
+  raidingParties: Party[];
+}
 
 export interface Adventurer {
   id: string;
@@ -103,6 +142,7 @@ export interface Adventurer {
   actionStartTime: number | null;
   actionEndTime: number | null;
   actionLabel: string | null;
+  equipment: AdventurerEquipment;
 }
 
 export interface TavernFoodConfig {
@@ -133,6 +173,7 @@ export interface ActivityLog {
     goldDelta?: number;
     xpDelta?: number;
     hpDelta?: number;
+    lootName?: string;
   };
   /** 是否触发了升级 */
   levelUp?: boolean;
@@ -151,4 +192,5 @@ export interface GameState {
   adventurers: Adventurer[];
   tavernFood: TavernFoodStock[];
   activityLogs: ActivityLog[];
+  guildHall: GuildHallState;
 }

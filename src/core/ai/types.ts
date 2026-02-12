@@ -3,6 +3,9 @@ import type { Adventurer, AdventurerStatus, GameState } from '../types.ts';
 export interface ActionContext {
   readonly adventurer: Adventurer;
   readonly state: GameState;
+  readonly effectiveAttack: number;
+  readonly effectiveDefense: number;
+  readonly effectiveMaxHp: number;
 }
 
 export interface ActionEffect {

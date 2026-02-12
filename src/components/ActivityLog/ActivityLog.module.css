@@ -87,6 +87,11 @@
   font-size: 13px;
 }
 
+.lootText {
+  color: var(--gold);
+  font-weight: 600;
+}
+
 /* Custom Scrollbar */
 .panel::-webkit-scrollbar {
   width: 6px;

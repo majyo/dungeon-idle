@@ -1,6 +1,7 @@
 import { useGameStore } from '../../hooks/useGameStore.ts';
 import { ProgressBar } from '../../components/ProgressBar/ProgressBar.tsx';
-import type { AdventurerClass, AdventurerStatus, AdventurerRarity } from '../../core/types.ts';
+import type { AdventurerClass, AdventurerStatus, AdventurerRarity, AdventurerEquipment } from '../../core/types.ts';
+import { getEquipmentDef } from '../../core/equipmentConfig.ts';
 import styles from './AdventurerPage.module.css';
 
 const CLASS_LABELS: Record<AdventurerClass, string> = {
@@ -21,22 +22,20 @@ const CLASS_ICONS: Record<AdventurerClass, string> = {
 
 const STATUS_LABELS: Record<AdventurerStatus, string> = {
   idle: '空闲',
-  exploring: '探索中',
-  fighting: '战斗中',
   resting: '休息中',
-  training: '训练中',
   gathering: '采集中',
-  guarding: '守卫中',
+  working: '打工中',
+  queuing: '排队中',
+  raiding: '副本中',
 };
 
 const STATUS_STYLES: Record<AdventurerStatus, string> = {
   idle: styles.statusIdle,
-  exploring: styles.statusExploring,
-  fighting: styles.statusFighting,
   resting: styles.statusResting,
-  training: styles.statusTraining,
   gathering: styles.statusGathering,
-  guarding: styles.statusGuarding,
+  working: styles.statusWorking,
+  queuing: styles.statusQueuing,
+  raiding: styles.statusRaiding,
 };
 
 const RARITY_LABELS: Record<AdventurerRarity, string> = {
@@ -52,6 +51,47 @@ const RARITY_STYLES: Record<AdventurerRarity, string> = {
   rare: styles.rarityRare,
   epic: styles.rarityEpic,
 };
+
+function getEquipBonus(equipment: AdventurerEquipment): { attack: number; defense: number; maxHp: number } {
+  let attack = 0, defense = 0, maxHp = 0;
+  for (const equipId of [equipment.weapon, equipment.armor]) {
+    if (!equipId) { continue; }
+    const def = getEquipmentDef(equipId);
+    if (!def) { continue; }
+    attack += def.stats.attack ?? 0;
+    defense += def.stats.defense ?? 0;
+    maxHp += def.stats.maxHp ?? 0;
+  }
+  return { attack, defense, maxHp };
+}
+
+function getEquipTierStyle(price: number): string {
+  if (price >= 100) { return styles.slotItemTier4; }
+  if (price >= 40) { return styles.slotItemTier3; }
+  if (price >= 20) { return styles.slotItemTier2; }
+  return styles.slotItemTier1;
+}
+
+function EquipmentSlotBox({ label, equipId }: { label: string; equipId: string | null }) {
+  const def = equipId ? getEquipmentDef(equipId) : null;
+  return (
+    <div className={styles.slotBox}>
+      <div className={styles.slotLabel}>{label}</div>
+      {def ? (
+        <>
+          <div className={`${styles.slotItem} ${getEquipTierStyle(def.price)}`}>{def.name}</div>
+          <div className={styles.slotStats}>
+            {def.stats.attack ? `攻击+${def.stats.attack} ` : ''}
+            {def.stats.defense ? `防御+${def.stats.defense} ` : ''}
+            {def.stats.maxHp ? `生命+${def.stats.maxHp}` : ''}
+          </div>
+        </>
+      ) : (
+        <div className={styles.slotEmpty}>无</div>
+      )}
+    </div>
+  );
+}
 
 export function AdventurerPage() {
   const state = useGameStore();
@@ -110,9 +150,23 @@ export function AdventurerPage() {
             </div>
 
             <div className={styles.stats}>
-              <span>攻击力 <span className={styles.statValue}>{adv.attack}</span></span>
-              <span>防御力 <span className={styles.statValue}>{adv.defense}</span></span>
-              <span>金币 <span className={styles.statValue}>{adv.gold}</span></span>
+              {(() => {
+                const bonus = getEquipBonus(adv.equipment);
+                return (
+                  <>
+                    <span>攻击力 <span className={styles.statValue}>{adv.attack}</span>{bonus.attack > 0 && <span className={styles.bonusStat}> (+{bonus.attack})</span>}</span>
+                    <span>防御力 <span className={styles.statValue}>{adv.defense}</span>{bonus.defense > 0 && <span className={styles.bonusStat}> (+{bonus.defense})</span>}</span>
+                    <span>金币 <span className={styles.statValue}>{adv.gold}</span></span>
+                  </>
+                );
+              })()}
+            </div>
+
+            <div className={styles.equipmentSection}>
+              <div className={styles.equipmentSlots}>
+                <EquipmentSlotBox label="武器" equipId={adv.equipment.weapon} />
+                <EquipmentSlotBox label="护甲" equipId={adv.equipment.armor} />
+              </div>
             </div>
 
             {adv.actionLabel && (

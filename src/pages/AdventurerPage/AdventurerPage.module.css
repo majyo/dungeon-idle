@@ -88,24 +88,9 @@
   border-color: var(--text-secondary);
 }
 
-.statusExploring {
-  color: var(--gold);
-  border-color: var(--gold);
-}
-
-.statusFighting {
-  color: #e74c3c;
-  border-color: #e74c3c;
-}
-
 .statusResting {
   color: #2ecc71;
   border-color: #2ecc71;
-}
-
-.statusTraining {
-  color: #9b59b6;
-  border-color: #9b59b6;
 }
 
 .statusGathering {
@@ -113,9 +98,19 @@
   border-color: #27ae60;
 }
 
-.statusGuarding {
-  color: #e67e22;
-  border-color: #e67e22;
+.statusWorking {
+  color: #f39c12;
+  border-color: #f39c12;
+}
+
+.statusQueuing {
+  color: #1abc9c;
+  border-color: #1abc9c;
+}
+
+.statusRaiding {
+  color: #e91e63;
+  border-color: #e91e63;
 }
 
 .actionProgress {
@@ -178,4 +173,67 @@
   color: var(--text-secondary);
   padding: 40px 0;
   font-size: 0.95rem;
+}
+
+.equipmentSection {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color);
+}
+
+.equipmentSlots {
+  display: flex;
+  gap: 8px;
+}
+
+.slotBox {
+  flex: 1;
+  background-color: var(--bg-light);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+}
+
+.slotLabel {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.slotEmpty {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.slotItem {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.slotItemTier1 {
+  color: var(--text-primary);
+}
+
+.slotItemTier2 {
+  color: #2ecc71;
+}
+
+.slotItemTier3 {
+  color: #3498db;
+}
+
+.slotItemTier4 {
+  color: #9b59b6;
+}
+
+.slotStats {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.bonusStat {
+  color: #2ecc71;
+  font-weight: 600;
 }
