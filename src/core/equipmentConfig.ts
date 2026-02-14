@@ -1,7 +1,7 @@
 import type { EquipmentDef, EquipmentSlot } from './types.ts';
 
 export const ALL_EQUIPMENT: EquipmentDef[] = [
-  // 武器
+  // === 武器 ===
   {
     id: 'wooden-sword',
     name: '木剑',
@@ -15,7 +15,7 @@ export const ALL_EQUIPMENT: EquipmentDef[] = [
     name: '猎弓',
     description: '猎人常用的弓，适合远程攻击',
     slot: 'weapon',
-    stats: { attack: 5 },
+    stats: { attack: 5, speed: 1 },
     price: 25,
   },
   {
@@ -27,11 +27,19 @@ export const ALL_EQUIPMENT: EquipmentDef[] = [
     price: 40,
   },
   {
+    id: 'apprentice-staff',
+    name: '学徒法杖',
+    description: '初学者使用的法杖，蕴含微弱魔力',
+    slot: 'weapon',
+    stats: { attack: 2, magicPower: 6 },
+    price: 35,
+  },
+  {
     id: 'magic-staff',
     name: '魔法杖',
     description: '蕴含魔力的法杖，施法者的利器',
     slot: 'weapon',
-    stats: { attack: 8 },
+    stats: { attack: 3, magicPower: 10 },
     price: 50,
   },
   {
@@ -42,7 +50,31 @@ export const ALL_EQUIPMENT: EquipmentDef[] = [
     stats: { attack: 12 },
     price: 100,
   },
-  // 护甲
+  {
+    id: 'longbow',
+    name: '长弓',
+    description: '射程远、威力大的精制长弓',
+    slot: 'weapon',
+    stats: { attack: 10, speed: 2, critRate: 0.03 },
+    price: 90,
+  },
+  {
+    id: 'arcane-staff',
+    name: '奥术法杖',
+    description: '强大的奥术法杖，魔力充沛',
+    slot: 'weapon',
+    stats: { attack: 4, magicPower: 16 },
+    price: 110,
+  },
+  {
+    id: 'holy-staff',
+    name: '圣光法杖',
+    description: '蕴含治愈之力的神圣法杖',
+    slot: 'weapon',
+    stats: { attack: 2, magicPower: 14, magicResist: 3 },
+    price: 100,
+  },
+  // === 护甲 ===
   {
     id: 'leather-armor',
     name: '皮甲',
@@ -52,11 +84,19 @@ export const ALL_EQUIPMENT: EquipmentDef[] = [
     price: 20,
   },
   {
+    id: 'light-armor',
+    name: '轻甲',
+    description: '灵活的轻型护甲，兼顾防御与速度',
+    slot: 'armor',
+    stats: { defense: 2, speed: 2 },
+    price: 30,
+  },
+  {
     id: 'mage-robe',
     name: '法师长袍',
-    description: '附魔的长袍，兼顾防御与生命力',
+    description: '附魔的长袍，增强魔力与生命力',
     slot: 'armor',
-    stats: { defense: 4, maxHp: 15 },
+    stats: { defense: 2, maxHp: 10, magicPower: 4, magicResist: 3 },
     price: 45,
   },
   {
@@ -66,6 +106,14 @@ export const ALL_EQUIPMENT: EquipmentDef[] = [
     slot: 'armor',
     stats: { defense: 6, maxHp: 10 },
     price: 50,
+  },
+  {
+    id: 'enchanted-robe',
+    name: '附魔长袍',
+    description: '强力附魔的长袍，大幅增强魔法能力',
+    slot: 'armor',
+    stats: { defense: 3, maxHp: 15, magicPower: 8, magicResist: 5 },
+    price: 95,
   },
   {
     id: 'plate-armor',
@@ -83,7 +131,13 @@ export function getEquipmentDef(id: string): EquipmentDef | undefined {
 
 /** 计算装备的总属性值，用于比较优劣 */
 function equipmentPower(def: EquipmentDef): number {
-  return (def.stats.attack ?? 0) + (def.stats.defense ?? 0) + (def.stats.maxHp ?? 0) * 0.2;
+  return (def.stats.attack ?? 0)
+    + (def.stats.defense ?? 0)
+    + (def.stats.maxHp ?? 0) * 0.2
+    + (def.stats.magicPower ?? 0)
+    + (def.stats.magicResist ?? 0) * 0.5
+    + (def.stats.speed ?? 0) * 0.8
+    + (def.stats.critRate ?? 0) * 20;
 }
 
 /** 找到买得起的、比当前装备更好的最佳装备 */

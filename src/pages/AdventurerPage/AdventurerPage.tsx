@@ -51,8 +51,8 @@ const RARITY_STYLES: Record<AdventurerRarity, string> = {
   epic: styles.rarityEpic,
 };
 
-function getEquipBonus(equipment: AdventurerEquipment): { attack: number; defense: number; maxHp: number } {
-  let attack = 0, defense = 0, maxHp = 0;
+function getEquipBonus(equipment: AdventurerEquipment): { attack: number; defense: number; maxHp: number; magicPower: number; magicResist: number; speed: number; critRate: number } {
+  let attack = 0, defense = 0, maxHp = 0, magicPower = 0, magicResist = 0, speed = 0, critRate = 0;
   for (const equipId of [equipment.weapon, equipment.armor]) {
     if (!equipId) { continue; }
     const def = getEquipmentDef(equipId);
@@ -60,8 +60,12 @@ function getEquipBonus(equipment: AdventurerEquipment): { attack: number; defens
     attack += def.stats.attack ?? 0;
     defense += def.stats.defense ?? 0;
     maxHp += def.stats.maxHp ?? 0;
+    magicPower += def.stats.magicPower ?? 0;
+    magicResist += def.stats.magicResist ?? 0;
+    speed += def.stats.speed ?? 0;
+    critRate += def.stats.critRate ?? 0;
   }
-  return { attack, defense, maxHp };
+  return { attack, defense, maxHp, magicPower, magicResist, speed, critRate };
 }
 
 function getEquipTierStyle(price: number): string {
@@ -157,6 +161,11 @@ export function AdventurerPage() {
                   <>
                     <span>攻击力 <span className={styles.statValue}>{adv.attack}</span>{bonus.attack > 0 && <span className={styles.bonusStat}> (+{bonus.attack})</span>}</span>
                     <span>防御力 <span className={styles.statValue}>{adv.defense}</span>{bonus.defense > 0 && <span className={styles.bonusStat}> (+{bonus.defense})</span>}</span>
+                    <span>魔法强度 <span className={styles.statValue}>{adv.magicPower}</span>{bonus.magicPower > 0 && <span className={styles.bonusStat}> (+{bonus.magicPower})</span>}</span>
+                    <span>魔法抗性 <span className={styles.statValue}>{adv.magicResist}</span>{bonus.magicResist > 0 && <span className={styles.bonusStat}> (+{bonus.magicResist})</span>}</span>
+                    <span>速度 <span className={styles.statValue}>{adv.speed}</span>{bonus.speed > 0 && <span className={styles.bonusStat}> (+{bonus.speed})</span>}</span>
+                    <span>暴击率 <span className={styles.statValue}>{Math.round((adv.critRate + bonus.critRate) * 100)}%</span></span>
+                    <span>暴击伤害 <span className={styles.statValue}>{Math.round(adv.critDamage * 100)}%</span></span>
                     <span>金币 <span className={styles.statValue}>{adv.gold}</span></span>
                   </>
                 );

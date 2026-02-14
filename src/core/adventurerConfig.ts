@@ -13,6 +13,11 @@ export const PRESET_ADVENTURERS: Omit<Adventurer, 'id'>[] = [
     maxHp: 120,
     attack: 15,
     defense: 10,
+    magicPower: 3,
+    magicResist: 5,
+    speed: 4,
+    critRate: 0.05,
+    critDamage: 1.5,
     gold: 0,
     status: 'idle',
     currentBuildingId: null,
@@ -31,8 +36,13 @@ export const PRESET_ADVENTURERS: Omit<Adventurer, 'id'>[] = [
     xpToNext: 150,
     hp: 70,
     maxHp: 80,
-    attack: 20,
+    attack: 7,
     defense: 5,
+    magicPower: 22,
+    magicResist: 7,
+    speed: 8,
+    critRate: 0.08,
+    critDamage: 1.6,
     gold: 0,
     status: 'idle',
     currentBuildingId: null,
@@ -53,6 +63,11 @@ export const PRESET_ADVENTURERS: Omit<Adventurer, 'id'>[] = [
     maxHp: 90,
     attack: 18,
     defense: 7,
+    magicPower: 3,
+    magicResist: 4,
+    speed: 11,
+    critRate: 0.12,
+    critDamage: 1.7,
     gold: 0,
     status: 'idle',
     currentBuildingId: null,
@@ -71,8 +86,13 @@ export const PRESET_ADVENTURERS: Omit<Adventurer, 'id'>[] = [
     xpToNext: 150,
     hp: 75,
     maxHp: 75,
-    attack: 8,
+    attack: 6,
     defense: 12,
+    magicPower: 18,
+    magicResist: 8,
+    speed: 5,
+    critRate: 0.04,
+    critDamage: 1.4,
     gold: 0,
     status: 'idle',
     currentBuildingId: null,
@@ -93,11 +113,36 @@ const ADVENTURER_NAMES: Record<AdventurerClass, string[]> = {
 };
 
 /** 各职业基础属性范围 */
-const CLASS_BASE_STATS: Record<AdventurerClass, { hp: [number, number]; attack: [number, number]; defense: [number, number] }> = {
-  warrior: { hp: [100, 140], attack: [12, 18], defense: [8, 14] },
-  archer: { hp: [75, 100], attack: [14, 20], defense: [5, 9] },
-  'elemental-mage': { hp: [60, 85], attack: [16, 24], defense: [3, 7] },
-  'life-mage': { hp: [70, 90], attack: [6, 12], defense: [7, 12] },
+const CLASS_BASE_STATS: Record<AdventurerClass, {
+  hp: [number, number];
+  attack: [number, number];
+  defense: [number, number];
+  magicPower: [number, number];
+  magicResist: [number, number];
+  speed: [number, number];
+  critRate: [number, number];
+  critDamage: [number, number];
+}> = {
+  warrior: {
+    hp: [100, 140], attack: [12, 18], defense: [8, 14],
+    magicPower: [2, 5], magicResist: [4, 8], speed: [3, 6],
+    critRate: [0.03, 0.06], critDamage: [1.4, 1.5],
+  },
+  archer: {
+    hp: [75, 100], attack: [14, 20], defense: [5, 9],
+    magicPower: [2, 4], magicResist: [3, 6], speed: [8, 12],
+    critRate: [0.08, 0.15], critDamage: [1.5, 1.8],
+  },
+  'elemental-mage': {
+    hp: [60, 85], attack: [6, 10], defense: [3, 7],
+    magicPower: [16, 24], magicResist: [5, 9], speed: [6, 10],
+    critRate: [0.05, 0.10], critDamage: [1.5, 1.7],
+  },
+  'life-mage': {
+    hp: [70, 90], attack: [4, 8], defense: [7, 12],
+    magicPower: [14, 20], magicResist: [6, 10], speed: [4, 7],
+    critRate: [0.03, 0.06], critDamage: [1.3, 1.5],
+  },
 };
 
 /** 稀有度权重 */
@@ -123,6 +168,10 @@ export function getAdventurerCap(guildHallLevel: number): number {
 
 function randInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function randFloat(min: number, max: number): number {
+  return min + Math.random() * (max - min);
 }
 
 function pickWeightedRarity(): AdventurerRarity {
@@ -215,6 +264,11 @@ export function generateRandomAdventurer(id: string, existingAdventurers?: reado
   const maxHp = Math.round(randInt(base.hp[0], base.hp[1]) * multiplier);
   const attack = Math.round(randInt(base.attack[0], base.attack[1]) * multiplier);
   const defense = Math.round(randInt(base.defense[0], base.defense[1]) * multiplier);
+  const magicPower = Math.round(randInt(base.magicPower[0], base.magicPower[1]) * multiplier);
+  const magicResist = Math.round(randInt(base.magicResist[0], base.magicResist[1]) * multiplier);
+  const speed = Math.round(randInt(base.speed[0], base.speed[1]) * multiplier);
+  const critRate = Math.round(randFloat(base.critRate[0], base.critRate[1]) * 100) / 100;
+  const critDamage = Math.round(randFloat(base.critDamage[0], base.critDamage[1]) * 100) / 100;
 
   // 从名字池中随机选一个
   const names = ADVENTURER_NAMES[advClass];
@@ -232,6 +286,11 @@ export function generateRandomAdventurer(id: string, existingAdventurers?: reado
     maxHp,
     attack,
     defense,
+    magicPower,
+    magicResist,
+    speed,
+    critRate,
+    critDamage,
     gold: 0,
     status: 'idle',
     currentBuildingId: null,

@@ -7,13 +7,30 @@ import { getEquipmentDef, findBestAffordable } from './equipmentConfig.ts';
 import { getDungeonDef, selectDungeonForParty } from './dungeonConfig.ts';
 import { getMonsterDef } from './monsterConfig.ts';
 import { PRESET_ADVENTURERS, getAdventurerCap, generateRandomAdventurer, getRole } from './adventurerConfig.ts';
+import { executeCombatTick } from './combat/combatEngine.ts';
 
 const COMBAT_TICK_INTERVAL = 2000; // 战斗回合间隔：2秒
 
-function getEffectiveStats(adv: Adventurer): { attack: number; defense: number; maxHp: number } {
+export interface EffectiveStats {
+  attack: number;
+  defense: number;
+  maxHp: number;
+  magicPower: number;
+  magicResist: number;
+  speed: number;
+  critRate: number;
+  critDamage: number;
+}
+
+export function getEffectiveStats(adv: Adventurer): EffectiveStats {
   let attack = adv.attack;
   let defense = adv.defense;
   let maxHp = adv.maxHp;
+  let magicPower = adv.magicPower;
+  let magicResist = adv.magicResist;
+  let speed = adv.speed;
+  let critRate = adv.critRate;
+  const critDamage = adv.critDamage;
 
   for (const equipId of [adv.equipment.weapon, adv.equipment.armor]) {
     if (!equipId) { continue; }
@@ -22,9 +39,13 @@ function getEffectiveStats(adv: Adventurer): { attack: number; defense: number; 
     attack += def.stats.attack ?? 0;
     defense += def.stats.defense ?? 0;
     maxHp += def.stats.maxHp ?? 0;
+    magicPower += def.stats.magicPower ?? 0;
+    magicResist += def.stats.magicResist ?? 0;
+    speed += def.stats.speed ?? 0;
+    critRate += def.stats.critRate ?? 0;
   }
 
-  return { attack, defense, maxHp };
+  return { attack, defense, maxHp, magicPower, magicResist, speed, critRate, critDamage };
 }
 
 function buildContext(adventurer: Adventurer, state: GameState): ActionContext {
@@ -742,11 +763,11 @@ export class WorldSystem {
   }
 
   /**
-   * 内部：计算伤害
+   * 内部：计算伤害（仅用于非战斗场景的兼容）
    */
   private _calculateDamage(attack: number, defense: number): number {
     const baseDamage = Math.max(1, attack - defense * 0.5);
-    const randomFactor = 0.8 + Math.random() * 0.4; // 0.8 ~ 1.2
+    const randomFactor = 0.85 + Math.random() * 0.3; // 0.85 ~ 1.15
     return Math.floor(baseDamage * randomFactor);
   }
 
@@ -784,6 +805,10 @@ export class WorldSystem {
       waveIndex,
       monsters,
       adventurerHp,
+      monsterStatusEffects: {},
+      adventurerStatusEffects: {},
+      cooldowns: {},
+      combatLog: [],
       lastTickTime: now,
     };
 
@@ -820,40 +845,8 @@ export class WorldSystem {
       return 'unchanged';
     }
 
-    // 获取存活的冒险者和怪物
-    const aliveAdventurers = party.memberIds
-      .map((id) => state.adventurers.find((a) => a.id === id))
-      .filter((a): a is Adventurer => a !== undefined && party.waveState!.adventurerHp[a.id] > 0);
-
-    const aliveMonsters = party.waveState.monsters.filter((m) => m.hp > 0);
-
-    // 冒险者攻击怪物
-    for (const adv of aliveAdventurers) {
-      if (aliveMonsters.length === 0) { break; }
-      const target = aliveMonsters[Math.floor(Math.random() * aliveMonsters.length)];
-      const effStats = getEffectiveStats(adv);
-      const monsterDef = getMonsterDef(target.defId);
-      const monsterDefense = monsterDef ? monsterDef.defense : 0;
-      const damage = this._calculateDamage(effStats.attack, monsterDefense);
-      target.hp = Math.max(0, target.hp - damage);
-    }
-
-    // 怪物攻击冒险者
-    const stillAliveMonsters = party.waveState.monsters.filter((m) => m.hp > 0);
-    for (const monster of stillAliveMonsters) {
-      const stillAliveAdventurers = party.memberIds
-        .map((id) => state.adventurers.find((a) => a.id === id))
-        .filter((a): a is Adventurer => a !== undefined && party.waveState!.adventurerHp[a.id] > 0);
-
-      if (stillAliveAdventurers.length === 0) { break; }
-
-      const target = stillAliveAdventurers[Math.floor(Math.random() * stillAliveAdventurers.length)];
-      const monsterDef = getMonsterDef(monster.defId);
-      const monsterAttack = monsterDef ? monsterDef.attack : 8;
-      const effStats = getEffectiveStats(target);
-      const damage = this._calculateDamage(monsterAttack, effStats.defense);
-      party.waveState.adventurerHp[target.id] = Math.max(0, party.waveState.adventurerHp[target.id] - damage);
-    }
+    // 使用新战斗引擎执行一个回合
+    const result = executeCombatTick(party, state);
 
     // 同步冒险者 HP 到 state
     state.adventurers = state.adventurers.map((adv) => {
@@ -866,23 +859,15 @@ export class WorldSystem {
       return adv;
     });
 
-    // 检查战斗结果
-    const finalAliveAdventurers = party.memberIds
-      .filter((id) => party.waveState!.adventurerHp[id] > 0);
-    const finalAliveMonsters = party.waveState.monsters.filter((m) => m.hp > 0);
-
-    // 队伍全灭
-    if (finalAliveAdventurers.length === 0) {
+    if (result === 'all-dead') {
       this._failRaid(party, state);
       return 'failed';
     }
 
-    // 怪物全灭 - 结算本轮奖励
-    if (finalAliveMonsters.length === 0) {
+    if (result === 'wave-clear') {
       this._settleWaveRewards(party, dungeon);
       party.completedWaves += 1;
 
-      // 检查是否通关
       if (party.completedWaves >= party.totalWaves) {
         this._completeRaidWithCombat(party, dungeon, state);
         return 'completed';
@@ -1038,6 +1023,9 @@ export class WorldSystem {
       let newMaxHp = adv.maxHp;
       let newAttack = adv.attack;
       let newDefense = adv.defense;
+      let newMagicPower = adv.magicPower;
+      let newMagicResist = adv.magicResist;
+      let newSpeed = adv.speed;
       let newHp = currentHp;
       let leveledUp = false;
 
@@ -1051,6 +1039,18 @@ export class WorldSystem {
         newHp += hpGain; // 只增加升级获得的HP
         newAttack += 1 + Math.floor(Math.random() * 3);
         newDefense += 1 + Math.floor(Math.random() * 2);
+        // 新属性成长（按职业倾向）
+        if (adv.class === 'elemental-mage' || adv.class === 'life-mage') {
+          newMagicPower += 2 + Math.floor(Math.random() * 3);
+        } else {
+          newMagicPower += Math.floor(Math.random() * 2);
+        }
+        newMagicResist += Math.floor(Math.random() * 2);
+        if (adv.class === 'archer') {
+          newSpeed += 1 + Math.floor(Math.random() * 2);
+        } else {
+          newSpeed += Math.floor(Math.random() * 2);
+        }
         leveledUp = true;
       }
 
@@ -1077,6 +1077,9 @@ export class WorldSystem {
         maxHp: newMaxHp,
         attack: newAttack,
         defense: newDefense,
+        magicPower: newMagicPower,
+        magicResist: newMagicResist,
+        speed: newSpeed,
         gold: adv.gold + goldPerMember,
         status: 'idle' as const,
         currentActionId: null,

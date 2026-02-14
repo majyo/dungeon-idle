@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../../hooks/useGameStore.ts';
 import { ProgressBar } from '../../components/ProgressBar/ProgressBar.tsx';
 import { getDungeonDef } from '../../core/dungeonConfig.ts';
 import { getMonsterDef } from '../../core/monsterConfig.ts';
-import type { AdventurerClass, Party, Adventurer, PartyRoleSlots } from '../../core/types.ts';
+import { getEffectiveStats } from '../../core/WorldSystem.ts';
+import type { AdventurerClass, Party, Adventurer, PartyRoleSlots, StatusEffect } from '../../core/types.ts';
 import styles from './GuildHallPage.module.css';
 
 const CLASS_ICONS: Record<AdventurerClass, string> = {
@@ -14,6 +15,28 @@ const CLASS_ICONS: Record<AdventurerClass, string> = {
 };
 
 const DEFAULT_RAID_DURATION = 20000; // 默认20秒
+
+const STATUS_ICONS: Record<string, string> = {
+  taunt: '🛡️',
+  stun: '💫',
+  burn: '🔥',
+  freeze: '❄️',
+  shield: '🔰',
+  'defense-up': '⬆️',
+};
+
+function StatusEffectIcons({ effects }: { effects: StatusEffect[] }) {
+  if (effects.length === 0) { return null; }
+  return (
+    <span className={styles.statusEffects}>
+      {effects.map((e, i) => (
+        <span key={`${e.id}-${i}`} className={styles.statusIcon} title={`${e.id} (${e.remainingTurns}回合)`}>
+          {STATUS_ICONS[e.id] ?? '✨'}
+        </span>
+      ))}
+    </span>
+  );
+}
 
 function formatTime(seconds: number): string {
   if (seconds <= 0) { return '0秒'; }
@@ -64,6 +87,38 @@ interface PartyCardProps {
   now: number;
 }
 
+const LOG_TYPE_COLORS: Record<string, string> = {
+  skill: 'var(--gold)',
+  damage: 'var(--text-secondary)',
+  heal: '#4ade80',
+  status: '#c084fc',
+  wave: 'var(--gold)',
+  death: '#f87171',
+};
+
+function CombatLog({ entries }: { entries: { text: string; type: string }[] }) {
+  const logRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (logRef.current) {
+      logRef.current.scrollTop = logRef.current.scrollHeight;
+    }
+  }, [entries.length]);
+
+  // 只显示最近10条
+  const recent = entries.slice(-10);
+
+  return (
+    <div className={styles.combatLog} ref={logRef}>
+      {recent.map((entry, i) => (
+        <div key={i} className={styles.logEntry} style={{ color: LOG_TYPE_COLORS[entry.type] ?? 'var(--text-secondary)' }}>
+          {entry.text}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function PartyCard({ party, adventurers, now }: PartyCardProps) {
   const members = party.memberIds
     .map((id) => adventurers.find((a) => a.id === id))
@@ -90,6 +145,7 @@ function PartyCard({ party, adventurers, now }: PartyCardProps) {
 
   // 战斗制副本：渲染战斗界面
   if (isRaiding && hasCombat && party.waveState) {
+    const ws = party.waveState;
     return (
       <div className={styles.partyCard}>
         <div className={styles.partyHeader}>
@@ -105,20 +161,25 @@ function PartyCard({ party, adventurers, now }: PartyCardProps) {
             <div className={styles.teamLabel}>冒险者</div>
             <div className={styles.combatantList}>
               {members.map((member) => {
-                const currentHp = party.waveState!.adventurerHp[member.id] ?? member.hp;
+                const currentHp = ws.adventurerHp[member.id] ?? member.hp;
+                const effStats = getEffectiveStats(member);
                 const isDead = currentHp <= 0;
+                const effects = ws.adventurerStatusEffects[member.id] ?? [];
                 return (
                   <div key={member.id} className={`${styles.combatant} ${isDead ? styles.dead : ''}`}>
                     <span className={styles.combatantIcon}>{CLASS_ICONS[member.class]}</span>
                     <div className={styles.combatantInfo}>
-                      <span className={styles.combatantName}>{member.name}</span>
+                      <div className={styles.combatantNameRow}>
+                        <span className={styles.combatantName}>{member.name}</span>
+                        <StatusEffectIcons effects={effects} />
+                      </div>
                       <ProgressBar
                         current={currentHp}
-                        max={member.maxHp}
+                        max={effStats.maxHp}
                         variant="hp"
                         showLabel={false}
                       />
-                      <span className={styles.hpText}>{currentHp}/{member.maxHp}</span>
+                      <span className={styles.hpText}>{currentHp}/{effStats.maxHp}</span>
                     </div>
                   </div>
                 );
@@ -133,14 +194,18 @@ function PartyCard({ party, adventurers, now }: PartyCardProps) {
           <div className={styles.teamSide}>
             <div className={styles.teamLabel}>怪物</div>
             <div className={styles.combatantList}>
-              {party.waveState.monsters.map((monster, idx) => {
+              {ws.monsters.map((monster, idx) => {
                 const monsterDef = getMonsterDef(monster.defId);
                 const isDead = monster.hp <= 0;
+                const effects = ws.monsterStatusEffects[idx] ?? [];
                 return (
                   <div key={idx} className={`${styles.combatant} ${isDead ? styles.dead : ''}`}>
                     <span className={styles.combatantIcon}>{monsterDef?.icon ?? '👾'}</span>
                     <div className={styles.combatantInfo}>
-                      <span className={styles.combatantName}>{monsterDef?.name ?? '未知怪物'}</span>
+                      <div className={styles.combatantNameRow}>
+                        <span className={styles.combatantName}>{monsterDef?.name ?? '未知怪物'}</span>
+                        <StatusEffectIcons effects={effects} />
+                      </div>
                       <ProgressBar
                         current={monster.hp}
                         max={monster.maxHp}
@@ -155,6 +220,11 @@ function PartyCard({ party, adventurers, now }: PartyCardProps) {
             </div>
           </div>
         </div>
+
+        {/* 战斗日志 */}
+        {ws.combatLog.length > 0 && (
+          <CombatLog entries={ws.combatLog} />
+        )}
 
         {/* 累计奖励 */}
         <div className={styles.rewardsInfo}>

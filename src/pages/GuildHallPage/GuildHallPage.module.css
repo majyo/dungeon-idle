@@ -181,3 +181,41 @@
   padding-top: 8px;
   border-top: 1px solid var(--border-color);
 }
+
+/* 状态效果图标 */
+.statusEffects {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: 4px;
+}
+
+.statusIcon {
+  font-size: 0.7rem;
+  cursor: default;
+}
+
+/* 战斗者名称行 */
+.combatantNameRow {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* 战斗日志 */
+.combatLog {
+  max-height: 140px;
+  overflow-y: auto;
+  margin: 8px 0;
+  padding: 8px;
+  background-color: var(--bg-dark, #1a1a2e);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.logEntry {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

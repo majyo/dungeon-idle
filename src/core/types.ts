@@ -73,6 +73,10 @@ export interface EquipmentStats {
   attack?: number;
   defense?: number;
   maxHp?: number;
+  magicPower?: number;
+  magicResist?: number;
+  speed?: number;
+  critRate?: number;
 }
 
 export interface EquipmentDef {
@@ -111,8 +115,34 @@ export interface MonsterDef {
   maxHp: number;
   attack: number;
   defense: number;
+  magicPower: number;
+  magicResist: number;
+  speed: number;
   xpReward: number;
   goldReward: number;
+  skills?: MonsterSkillDef[];
+}
+
+/** 怪物技能定义 */
+export interface MonsterSkillDef {
+  id: string;
+  name: string;
+  type: 'physical' | 'magical';
+  target: 'single' | 'all' | 'lowest-hp';
+  multiplier: number;
+  cooldown: number;
+  statusEffect?: { id: StatusEffectId; duration: number; chance: number; value?: number };
+}
+
+/** 状态效果ID */
+export type StatusEffectId = 'taunt' | 'stun' | 'burn' | 'freeze' | 'shield' | 'defense-up';
+
+/** 战斗中的状态效果 */
+export interface StatusEffect {
+  id: StatusEffectId;
+  sourceId: string;
+  remainingTurns: number;
+  value?: number;
 }
 
 /** 战斗中的怪物实例 */
@@ -134,7 +164,18 @@ export interface WaveState {
   waveIndex: number;
   monsters: MonsterInstance[];
   adventurerHp: Record<string, number>;
+  monsterStatusEffects: Record<number, StatusEffect[]>;
+  adventurerStatusEffects: Record<string, StatusEffect[]>;
+  cooldowns: Record<string, Record<string, number>>;
+  combatLog: CombatLogEntry[];
   lastTickTime: number;
+}
+
+/** 战斗日志条目 */
+export interface CombatLogEntry {
+  timestamp: number;
+  text: string;
+  type: 'skill' | 'damage' | 'heal' | 'status' | 'wave' | 'death';
 }
 
 export interface Party {
@@ -179,6 +220,11 @@ export interface Adventurer {
   maxHp: number;
   attack: number;
   defense: number;
+  magicPower: number;
+  magicResist: number;
+  speed: number;
+  critRate: number;
+  critDamage: number;
   gold: number;
   status: AdventurerStatus;
   currentBuildingId: string | null;
