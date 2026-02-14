@@ -10,6 +10,7 @@ export class GameStore {
   private _snapshot: GameState;
   private _emitter = new EventEmitter();
   private _decisionTimer: ReturnType<typeof setInterval> | null = null;
+  private _gatheringTimer: ReturnType<typeof setInterval> | null = null;
   private _worldSystem = new WorldSystem();
 
   private constructor() {
@@ -36,31 +37,6 @@ export class GameStore {
   private _notify(): void {
     this._snapshot = { ...this._state };
     this._emitter.emit();
-  }
-
-  attackEnemy(): void {
-    const combat = this._state.combat;
-    // 玩家攻击敌人
-    combat.enemyHp = Math.max(0, combat.enemyHp - combat.playerAttack);
-
-    if (combat.enemyHp <= 0) {
-      // 敌人被击败
-      combat.enemiesDefeated += 1;
-      this._state.gold += combat.enemyGoldReward;
-      // 重置敌人
-      combat.enemyHp = combat.enemyMaxHp;
-    } else {
-      // 敌人反击
-      combat.playerHp = Math.max(0, combat.playerHp - combat.enemyAttack);
-      if (combat.playerHp <= 0) {
-        // 玩家死亡，重置双方HP
-        combat.playerHp = combat.playerMaxHp;
-        combat.enemyHp = combat.enemyMaxHp;
-      }
-    }
-
-    this._state.combat = { ...combat };
-    this._notify();
   }
 
   buyItem(itemId: string): void {
@@ -195,10 +171,6 @@ export class GameStore {
     }
 
     const levelConfig = building.levels[building.level];
-    // 金币不足
-    if (this._state.gold < levelConfig.gold) {
-      return;
-    }
 
     // 材料不足
     for (const mat of levelConfig.materials) {
@@ -207,9 +179,6 @@ export class GameStore {
         return;
       }
     }
-
-    // 扣除金币
-    this._state.gold -= levelConfig.gold;
 
     // 扣除材料
     for (const mat of levelConfig.materials) {
@@ -271,6 +240,87 @@ export class GameStore {
     this._notify();
   }
 
+  stockEquipment(equipmentId: string, quantity: number): void {
+    const existing = this._state.storeEquipment.find((e) => e.equipmentId === equipmentId);
+    if (existing) {
+      existing.quantity += quantity;
+      this._state.storeEquipment = this._state.storeEquipment.map((e) =>
+        e.equipmentId === equipmentId ? { ...existing } : e
+      );
+    } else {
+      this._state.storeEquipment = [
+        ...this._state.storeEquipment,
+        { equipmentId, quantity },
+      ];
+    }
+    this._notify();
+  }
+
+  startGathering(skillId: 'woodcutting' | 'mining', nodeId: string): void {
+    // 查找对应节点获取采集时间
+    let duration: number;
+    if (skillId === 'woodcutting') {
+      const node = this._state.woodcuttingNodes.find((n) => n.id === nodeId);
+      if (!node) {
+        return;
+      }
+      const skill = this._state.skills.find((s) => s.id === 'woodcutting');
+      if (!skill || skill.level < node.levelRequired) {
+        return;
+      }
+      duration = node.chopTime;
+    } else {
+      const node = this._state.miningNodes.find((n) => n.id === nodeId);
+      if (!node) {
+        return;
+      }
+      const skill = this._state.skills.find((s) => s.id === 'mining');
+      if (!skill || skill.level < node.levelRequired) {
+        return;
+      }
+      duration = node.mineTime;
+    }
+
+    this._state.gathering = {
+      skillId,
+      nodeId,
+      startTime: Date.now(),
+      duration,
+    };
+    this._notify();
+  }
+
+  stopGathering(): void {
+    if (!this._state.gathering) {
+      return;
+    }
+    this._state.gathering = null;
+    this._notify();
+  }
+
+  private _tickGathering(): void {
+    const g = this._state.gathering;
+    if (!g) {
+      return;
+    }
+
+    const now = Date.now();
+    if (now >= g.startTime + g.duration) {
+      // 完成采集
+      if (g.skillId === 'woodcutting') {
+        this.chopWood(g.nodeId);
+      } else {
+        this.mineOre(g.nodeId);
+      }
+      // 自动开始下一轮（chopWood/mineOre 已经 _notify 了）
+      this._state.gathering = {
+        ...g,
+        startTime: now,
+      };
+      this._notify();
+    }
+  }
+
   startAdventurerAI(): void {
     if (this._decisionTimer) {
       return;
@@ -278,12 +328,19 @@ export class GameStore {
     this._decisionTimer = setInterval(() => {
       this._tickAdventurers();
     }, 1000);
+    this._gatheringTimer = setInterval(() => {
+      this._tickGathering();
+    }, 200);
   }
 
   stopAdventurerAI(): void {
     if (this._decisionTimer) {
       clearInterval(this._decisionTimer);
       this._decisionTimer = null;
+    }
+    if (this._gatheringTimer) {
+      clearInterval(this._gatheringTimer);
+      this._gatheringTimer = null;
     }
   }
 

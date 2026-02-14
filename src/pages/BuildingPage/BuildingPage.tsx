@@ -3,6 +3,7 @@ import { useGameStore, store } from '../../hooks/useGameStore.ts';
 import { ProgressBar } from '../../components/ProgressBar/ProgressBar.tsx';
 import { Modal } from '../../components/Modal/Modal.tsx';
 import { TAVERN_FOODS, getFoodConfig } from '../../core/foodConfig.ts';
+import { ALL_EQUIPMENT, getEquipmentDef } from '../../core/equipmentConfig.ts';
 import styles from './BuildingPage.module.css';
 
 const TICK_INTERVAL = 50;
@@ -16,6 +17,9 @@ export function BuildingPage() {
   const [showFoodModal, setShowFoodModal] = useState(false);
   const [selectedFoodId, setSelectedFoodId] = useState(TAVERN_FOODS[0]?.id ?? '');
   const [stockQuantity, setStockQuantity] = useState(10);
+  const [showEquipModal, setShowEquipModal] = useState(false);
+  const [selectedEquipId, setSelectedEquipId] = useState(ALL_EQUIPMENT[0]?.id ?? '');
+  const [equipQuantity, setEquipQuantity] = useState(5);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const clearTickInterval = useCallback(() => {
@@ -66,7 +70,16 @@ export function BuildingPage() {
     }
   };
 
+  const handleStockEquipment = () => {
+    if (selectedEquipId && equipQuantity > 0) {
+      store.stockEquipment(selectedEquipId, equipQuantity);
+      setShowEquipModal(false);
+      setEquipQuantity(5);
+    }
+  };
+
   const selectedFoodConfig = getFoodConfig(selectedFoodId);
+  const selectedEquipConfig = getEquipmentDef(selectedEquipId);
 
   return (
     <div className={styles.page}>
@@ -81,11 +94,10 @@ export function BuildingPage() {
           // 检查资源是否足够
           let canAfford = false;
           if (levelConfig) {
-            const goldOk = state.gold >= levelConfig.gold;
             const matsOk = levelConfig.materials.every(
               (mat) => getItemQuantity(mat.itemId) >= mat.amount
             );
-            canAfford = goldOk && matsOk;
+            canAfford = matsOk;
           }
 
           let buttonText: string;
@@ -112,6 +124,12 @@ export function BuildingPage() {
             ? state.tavernFood.filter((f) => f.quantity > 0)
             : [];
 
+          // 杂货店装备库存
+          const isGeneralStore = building.id === 'general-store' && building.level >= 1;
+          const equipStocks = isGeneralStore
+            ? state.storeEquipment.filter((e) => e.quantity > 0)
+            : [];
+
           return (
             <div key={building.id} className={styles.buildingCard}>
               <div className={styles.buildingHeader}>
@@ -124,9 +142,6 @@ export function BuildingPage() {
 
               {levelConfig && (
                 <div className={styles.costList}>
-                  <div className={state.gold >= levelConfig.gold ? styles.costItem : styles.costItemInsufficient}>
-                    金币: {state.gold}/{levelConfig.gold}
-                  </div>
                   {levelConfig.materials.map((mat) => {
                     const owned = getItemQuantity(mat.itemId);
                     const enough = owned >= mat.amount;
@@ -191,6 +206,26 @@ export function BuildingPage() {
                   </button>
                 </>
               )}
+
+              {isGeneralStore && (
+                <>
+                  {equipStocks.length > 0 && (
+                    <div className={styles.foodStock}>
+                      {equipStocks.map((stock) => {
+                        const config = getEquipmentDef(stock.equipmentId);
+                        return config ? (
+                          <span key={stock.equipmentId} className={styles.foodStockItem}>
+                            ⚔️ {config.name} x{stock.quantity}
+                          </span>
+                        ) : null;
+                      })}
+                    </div>
+                  )}
+                  <button className={styles.stockButton} onClick={() => { setShowEquipModal(true); }}>
+                    上架装备
+                  </button>
+                </>
+              )}
             </div>
           );
         })}
@@ -232,6 +267,52 @@ export function BuildingPage() {
               className={styles.confirmButton}
               disabled={!selectedFoodId || stockQuantity <= 0}
               onClick={handleStockFood}
+            >
+              确认上架
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {showEquipModal && (
+        <Modal title="上架装备" onClose={() => { setShowEquipModal(false); }}>
+          <div className={styles.stockForm}>
+            <div className={styles.formGroup}>
+              <label htmlFor="equip-select">装备类型</label>
+              <select
+                id="equip-select"
+                value={selectedEquipId}
+                onChange={(e) => { setSelectedEquipId(e.target.value); }}
+              >
+                {ALL_EQUIPMENT.map((equip) => (
+                  <option key={equip.id} value={equip.id}>{equip.name}（{equip.slot === 'weapon' ? '武器' : '护甲'}）</option>
+                ))}
+              </select>
+            </div>
+            <div className={styles.formGroup}>
+              <label htmlFor="equip-quantity">数量</label>
+              <input
+                id="equip-quantity"
+                type="number"
+                min={1}
+                max={999}
+                value={equipQuantity}
+                onChange={(e) => { setEquipQuantity(Math.max(1, parseInt(e.target.value) || 1)); }}
+              />
+            </div>
+            {selectedEquipConfig && (
+              <div className={styles.foodInfo}>
+                {selectedEquipConfig.description}<br />
+                {selectedEquipConfig.stats.attack ? `攻击 +${selectedEquipConfig.stats.attack} ` : ''}
+                {selectedEquipConfig.stats.defense ? `防御 +${selectedEquipConfig.stats.defense} ` : ''}
+                {selectedEquipConfig.stats.maxHp ? `生命 +${selectedEquipConfig.stats.maxHp} ` : ''}
+                · 售价 {selectedEquipConfig.price} 金币
+              </div>
+            )}
+            <button
+              className={styles.confirmButton}
+              disabled={!selectedEquipId || equipQuantity <= 0}
+              onClick={handleStockEquipment}
             >
               确认上架
             </button>

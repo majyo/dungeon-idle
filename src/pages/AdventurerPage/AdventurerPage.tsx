@@ -2,22 +2,21 @@ import { useGameStore } from '../../hooks/useGameStore.ts';
 import { ProgressBar } from '../../components/ProgressBar/ProgressBar.tsx';
 import type { AdventurerClass, AdventurerStatus, AdventurerRarity, AdventurerEquipment } from '../../core/types.ts';
 import { getEquipmentDef } from '../../core/equipmentConfig.ts';
+import { getAdventurerCap } from '../../core/adventurerConfig.ts';
 import styles from './AdventurerPage.module.css';
 
 const CLASS_LABELS: Record<AdventurerClass, string> = {
   warrior: '战士',
-  mage: '法师',
   archer: '弓箭手',
-  healer: '治疗师',
-  priest: '牧师',
+  'elemental-mage': '元素法师',
+  'life-mage': '生命法师',
 };
 
 const CLASS_ICONS: Record<AdventurerClass, string> = {
   warrior: '⚔️',
-  mage: '🔮',
   archer: '🏹',
-  healer: '💚',
-  priest: '✝️',
+  'elemental-mage': '🔮',
+  'life-mage': '💚',
 };
 
 const STATUS_LABELS: Record<AdventurerStatus, string> = {
@@ -96,11 +95,13 @@ function EquipmentSlotBox({ label, equipId }: { label: string; equipId: string |
 export function AdventurerPage() {
   const state = useGameStore();
   const { adventurers, buildings } = state;
+  const guildHall = buildings.find((b) => b.id === 'guild-hall');
+  const cap = getAdventurerCap(guildHall?.level ?? 0);
 
   if (adventurers.length === 0) {
     return (
       <div className={styles.page}>
-        <h2>🧙 冒险者</h2>
+        <h2>🧙 冒险者 ({adventurers.length}/{cap})</h2>
         <p className={styles.empty}>还没有冒险者加入队伍</p>
       </div>
     );
@@ -108,7 +109,7 @@ export function AdventurerPage() {
 
   return (
     <div className={styles.page}>
-      <h2>🧙 冒险者</h2>
+      <h2>🧙 冒险者 ({adventurers.length}/{cap})</h2>
       <div className={styles.adventurerList}>
         {adventurers.map((adv) => (
           <div key={adv.id} className={styles.card}>

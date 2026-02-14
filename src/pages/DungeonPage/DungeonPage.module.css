@@ -1,0 +1,210 @@
+.page {
+  max-width: 700px;
+}
+
+.page h2 {
+  color: var(--gold);
+  margin-bottom: 20px;
+  font-size: 1.4rem;
+}
+
+.dungeonList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dungeonCard {
+  background-color: var(--bg-medium);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 16px;
+  transition: border-color 0.2s;
+}
+
+.dungeonCard:hover {
+  border-color: var(--gold);
+}
+
+.dungeonCard.locked {
+  opacity: 0.6;
+}
+
+.dungeonCard.locked:hover {
+  border-color: var(--border-color);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.dungeonIcon {
+  font-size: 2rem;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg-light);
+  border-radius: var(--radius);
+}
+
+.dungeonInfo {
+  flex: 1;
+}
+
+.dungeonName {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.dungeonMeta {
+  display: flex;
+  gap: 12px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.difficulty {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.difficulty.easy {
+  background-color: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+}
+
+.difficulty.normal {
+  background-color: rgba(255, 193, 7, 0.2);
+  color: #ffc107;
+}
+
+.difficulty.hard {
+  background-color: rgba(255, 87, 34, 0.2);
+  color: #ff5722;
+}
+
+.difficulty.nightmare {
+  background-color: rgba(156, 39, 176, 0.2);
+  color: #9c27b0;
+}
+
+.dungeonDesc {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin-bottom: 12px;
+}
+
+.rewardSection {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+.rewardItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85rem;
+}
+
+.rewardLabel {
+  color: var(--text-secondary);
+}
+
+.rewardValue {
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.clearCount {
+  margin-left: auto;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.clearCount span {
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.lockInfo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin-top: 8px;
+}
+
+.lockIcon {
+  font-size: 1rem;
+}
+
+.empty {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 40px 0;
+  font-size: 0.95rem;
+}
+
+.activeRaids {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+.activeRaidsTitle {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.activeRaidParty {
+  background-color: var(--bg-light);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  margin-bottom: 6px;
+}
+
+.activeRaidParty:last-child {
+  margin-bottom: 0;
+}
+
+.activePartyHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.activePartyName {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.waveInfo {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.activePartyMembers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.activePartyMember {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}

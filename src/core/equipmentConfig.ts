@@ -87,7 +87,7 @@ function equipmentPower(def: EquipmentDef): number {
 }
 
 /** 找到买得起的、比当前装备更好的最佳装备 */
-export function findBestAffordable(slot: EquipmentSlot, gold: number, currentEquipId: string | null): EquipmentDef | null {
+export function findBestAffordable(slot: EquipmentSlot, gold: number, currentEquipId: string | null, availableIds?: Set<string>): EquipmentDef | null {
   const currentDef = currentEquipId ? ALL_EQUIPMENT.find((e) => e.id === currentEquipId) : null;
   const currentPower = currentDef ? equipmentPower(currentDef) : 0;
 
@@ -97,6 +97,7 @@ export function findBestAffordable(slot: EquipmentSlot, gold: number, currentEqu
   for (const equip of ALL_EQUIPMENT) {
     if (equip.slot !== slot) { continue; }
     if (equip.price > gold) { continue; }
+    if (availableIds && !availableIds.has(equip.id)) { continue; }
     const power = equipmentPower(equip);
     if (power > bestPower) {
       best = equip;

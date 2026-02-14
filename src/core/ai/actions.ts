@@ -23,7 +23,7 @@ const restAction: ActionDefinition = {
     if (hp < 0.3) {
       base = Math.max(base, 0.9);
     }
-    if (ctx.adventurer.class === 'priest' || ctx.adventurer.class === 'healer') {
+    if (ctx.adventurer.class === 'life-mage') {
       base *= 0.8;
     }
     return base;
@@ -48,7 +48,7 @@ const gatherAction: ActionDefinition = {
   score: (ctx) => {
     let base = 0.35;
     if (ctx.adventurer.class === 'archer') { base *= 1.3; }
-    if (ctx.adventurer.class === 'healer') { base *= 1.2; }
+    if (ctx.adventurer.class === 'life-mage') { base *= 1.2; }
     const storeLv = getBuildingLevel(ctx, 'general-store');
     base *= 1 + storeLv * 0.05;
     return base;
@@ -70,7 +70,7 @@ const workAction: ActionDefinition = {
   duration: () => 4000,
   score: (ctx) => {
     let base = 0.4;
-    if (ctx.adventurer.class === 'priest') { base *= 1.2; }
+    if (ctx.adventurer.class === 'life-mage') { base *= 1.2; }
     const guildLv = getBuildingLevel(ctx, 'guild-hall');
     base *= 1 + guildLv * 0.03;
     return base;
@@ -96,17 +96,27 @@ const buyEquipmentAction: ActionDefinition = {
   duration: () => 3000,
   score: (ctx) => {
     if (ctx.adventurer.gold < 15) { return 0; }
+
+    // 构建库存可用装备ID集合
+    const availableIds = new Set<string>();
+    for (const stock of ctx.state.storeEquipment) {
+      if (stock.quantity > 0) {
+        availableIds.add(stock.equipmentId);
+      }
+    }
+    if (availableIds.size === 0) { return 0; }
+
     const { equipment } = ctx.adventurer;
     const hasEmptySlot = !equipment.weapon || !equipment.armor;
     if (hasEmptySlot) {
       // 检查是否真的买得起空槽位的装备
       const emptySlot = !equipment.weapon ? 'weapon' : 'armor';
-      const canBuy = findBestAffordable(emptySlot as 'weapon' | 'armor', ctx.adventurer.gold, null);
+      const canBuy = findBestAffordable(emptySlot as 'weapon' | 'armor', ctx.adventurer.gold, null, availableIds);
       return canBuy ? 0.7 : 0;
     }
     // 已满装，检查是否有更好的装备可买
-    const betterWeapon = findBestAffordable('weapon', ctx.adventurer.gold, equipment.weapon);
-    const betterArmor = findBestAffordable('armor', ctx.adventurer.gold, equipment.armor);
+    const betterWeapon = findBestAffordable('weapon', ctx.adventurer.gold, equipment.weapon, availableIds);
+    const betterArmor = findBestAffordable('armor', ctx.adventurer.gold, equipment.armor, availableIds);
     return (betterWeapon || betterArmor) ? 0.3 : 0;
   },
   effect: () => {
@@ -120,7 +130,7 @@ const queuePartyAction: ActionDefinition = {
   label: '组队',
   status: 'queuing',
   requiredBuildingId: 'guild-hall',
-  minBuildingLevel: 2,
+  minBuildingLevel: 1,
   duration: () => 60000,
   score: (ctx) => {
     const hp = hpPercent(ctx);
@@ -128,7 +138,8 @@ const queuePartyAction: ActionDefinition = {
     let base = 0.85;             // 高于explore(0.5)、fight(0.4)
     base *= (0.7 + hp * 0.3);
     if (ctx.adventurer.class === 'warrior') { base *= 1.2; }
-    if (ctx.adventurer.class === 'mage') { base *= 1.15; }
+    if (ctx.adventurer.class === 'elemental-mage') { base *= 1.15; }
+    if (ctx.adventurer.class === 'life-mage') { base *= 1.2; }
     return base;
   },
   effect: () => ({ statusAfter: 'idle' }),

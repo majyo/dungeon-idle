@@ -5,7 +5,16 @@
       "Bash(npm install:*)",
       "Bash(npm start)",
       "Bash(npm run lint)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(timeout:*)",
+      "Bash(ping:*)",
+      "Bash(npm run package:*)",
+      "Bash(Select-String -NotMatch \"main.ts\")",
+      "Bash(npx eslint:*)",
+      "Bash(wc:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git reset:*)"
     ]
   }
 }

@@ -3,72 +3,65 @@ import { useGameStore, store } from '../../hooks/useGameStore.ts';
 import { ProgressBar } from '../../components/ProgressBar/ProgressBar.tsx';
 import styles from './WoodcuttingPage.module.css';
 
-const TICK_INTERVAL = 50;
+const UI_TICK = 50;
 
 export function WoodcuttingPage() {
   const state = useGameStore();
   const skill = state.skills.find((s) => s.id === 'woodcutting');
+  const gathering = state.gathering;
+  const isGatheringWood = gathering !== null && gathering.skillId === 'woodcutting';
+  const activeNodeId = isGatheringWood ? gathering.nodeId : null;
 
-  const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [skipTransition, setSkipTransition] = useState(false);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const uiTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const prevStartTimeRef = useRef<number | null>(null);
 
-  const clearGatherInterval = useCallback(() => {
-    if (intervalRef.current !== null) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-  }, []);
-
-  const startGathering = useCallback(
-    (nodeId: string, chopTime: number) => {
-      clearGatherInterval();
-      setActiveNodeId(nodeId);
+  // 纯 UI 进度条动画
+  useEffect(() => {
+    if (!isGatheringWood) {
       setProgress(0);
+      prevStartTimeRef.current = null;
+      if (uiTimerRef.current !== null) {
+        clearInterval(uiTimerRef.current);
+        uiTimerRef.current = null;
+      }
+      return;
+    }
 
-      const increment = (TICK_INTERVAL / chopTime) * 100;
-      let current = 0;
-      let justCompleted = false;
+    const { startTime, duration } = gathering;
 
-      intervalRef.current = setInterval(() => {
-        if (justCompleted) {
-          current = 0;
-          justCompleted = false;
-          setSkipTransition(true);
-        } else {
-          setSkipTransition(false);
-        }
-        current += increment;
-        if (current >= 100) {
-          current = 100;
-          store.chopWood(nodeId);
-          justCompleted = true;
-        }
-        setProgress(current);
-      }, TICK_INTERVAL);
-    },
-    [clearGatherInterval],
-  );
+    // 检测新一轮开始（startTime 变化）
+    if (prevStartTimeRef.current !== null && prevStartTimeRef.current !== startTime) {
+      setSkipTransition(true);
+      requestAnimationFrame(() => setSkipTransition(false));
+    }
+    prevStartTimeRef.current = startTime;
+
+    uiTimerRef.current = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const pct = Math.min((elapsed / duration) * 100, 100);
+      setProgress(pct);
+    }, UI_TICK);
+
+    return () => {
+      if (uiTimerRef.current !== null) {
+        clearInterval(uiTimerRef.current);
+        uiTimerRef.current = null;
+      }
+    };
+  }, [isGatheringWood, gathering?.startTime, gathering?.duration]);
 
   const handleNodeClick = useCallback(
-    (nodeId: string, chopTime: number) => {
+    (nodeId: string) => {
       if (activeNodeId === nodeId) {
-        clearGatherInterval();
-        setActiveNodeId(null);
-        setProgress(0);
+        store.stopGathering();
       } else {
-        startGathering(nodeId, chopTime);
+        store.startGathering('woodcutting', nodeId);
       }
     },
-    [activeNodeId, clearGatherInterval, startGathering],
+    [activeNodeId],
   );
-
-  useEffect(() => {
-    return () => {
-      clearGatherInterval();
-    };
-  }, [clearGatherInterval]);
 
   return (
     <div className={styles.page}>
@@ -105,7 +98,7 @@ export function WoodcuttingPage() {
               <button
                 className={styles.chopButton}
                 disabled={!canChop}
-                onClick={() => handleNodeClick(node.id, node.chopTime)}
+                onClick={() => handleNodeClick(node.id)}
               >
                 {buttonText}
               </button>

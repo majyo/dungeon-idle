@@ -1,17 +1,5 @@
 export type ItemType = 'weapon' | 'armor' | 'consumable' | 'material';
 
-export interface CombatState {
-  playerHp: number;
-  playerMaxHp: number;
-  playerAttack: number;
-  enemyName: string;
-  enemyHp: number;
-  enemyMaxHp: number;
-  enemyAttack: number;
-  enemyGoldReward: number;
-  enemiesDefeated: number;
-}
-
 export interface Skill {
   id: string;
   name: string;
@@ -60,7 +48,6 @@ export interface BuildingMaterialCost {
 }
 
 export interface BuildingLevelConfig {
-  gold: number;
   materials: BuildingMaterialCost[];
   time: number;
 }
@@ -102,25 +89,82 @@ export interface AdventurerEquipment {
   armor: string | null;   // EquipmentDef.id
 }
 
-export type AdventurerClass = 'warrior' | 'mage' | 'archer' | 'healer' | 'priest';
+export type AdventurerClass = 'warrior' | 'archer' | 'elemental-mage' | 'life-mage';
+export type AdventurerRole = 'tank' | 'dps' | 'healer';
+
+export interface PartyRoleSlots {
+  tank: string | null;
+  dps1: string | null;
+  dps2: string | null;
+  healer: string | null;
+}
 export type AdventurerStatus = 'idle' | 'resting' | 'gathering' | 'working' | 'queuing' | 'raiding';
 export type AdventurerRarity = 'common' | 'uncommon' | 'rare' | 'epic';
 
 export type PartyStatus = 'forming' | 'raiding';
 
+/** 怪物定义（配置数据） */
+export interface MonsterDef {
+  id: string;
+  name: string;
+  icon: string;
+  maxHp: number;
+  attack: number;
+  defense: number;
+  xpReward: number;
+  goldReward: number;
+}
+
+/** 战斗中的怪物实例 */
+export interface MonsterInstance {
+  defId: string;
+  hp: number;
+  maxHp: number;
+}
+
+/** 战斗轮次配置 */
+export interface WaveDef {
+  monsterIds: [string, string, string, string];
+  bonusGold?: number;
+  bonusXp?: number;
+}
+
+/** 战斗轮次运行时状态 */
+export interface WaveState {
+  waveIndex: number;
+  monsters: MonsterInstance[];
+  adventurerHp: Record<string, number>;
+  lastTickTime: number;
+}
+
 export interface Party {
   id: string;
+  name: string;
   memberIds: string[];           // 最多4人
   status: PartyStatus;
   createdAt: number;
   formingDeadline: number;       // 创建后60秒
   raidStartTime: number | null;
   raidEndTime: number | null;    // 开始后20秒
+  dungeonId: string | null;      // 当前攻略的副本ID
+  waveState: WaveState | null;   // 战斗轮次状态
+  completedWaves: number;        // 已完成轮次数
+  totalWaves: number;            // 总轮次数
+  accumulatedRewards: { gold: number; xp: number };  // 累计奖励
+  roleSlots: PartyRoleSlots | null;  // 职能槽位（组队阶段使用）
+}
+
+/** 副本通关记录 */
+export interface DungeonClearRecord {
+  dungeonId: string;
+  clearCount: number;
+  lastClearTime: number;
 }
 
 export interface GuildHallState {
   formingParties: Party[];
   raidingParties: Party[];
+  dungeonRecords: DungeonClearRecord[];
 }
 
 export interface Adventurer {
@@ -158,6 +202,11 @@ export interface TavernFoodStock {
   quantity: number;
 }
 
+export interface EquipmentStock {
+  equipmentId: string;
+  quantity: number;
+}
+
 /** 活动日志条目 */
 export interface ActivityLog {
   /** 唯一 ID，用于 React key */
@@ -179,9 +228,15 @@ export interface ActivityLog {
   levelUp?: boolean;
 }
 
+export interface GatheringState {
+  skillId: 'woodcutting' | 'mining';
+  nodeId: string;
+  startTime: number;
+  duration: number;
+}
+
 export interface GameState {
   gold: number;
-  combat: CombatState;
   skills: Skill[];
   shop: ShopItem[];
   inventory: InventoryItem[];
@@ -191,6 +246,10 @@ export interface GameState {
   buildingConstruction: BuildingConstruction | null;
   adventurers: Adventurer[];
   tavernFood: TavernFoodStock[];
+  storeEquipment: EquipmentStock[];
   activityLogs: ActivityLog[];
+  gathering: GatheringState | null;
   guildHall: GuildHallState;
+  nextAdventurerIndex: number;
+  lastSpawnTime: number;
 }

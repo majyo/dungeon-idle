@@ -1,9 +1,14 @@
-import type { Adventurer, GameState, ActivityLog, Party } from './types.ts';
+import type { Adventurer, GameState, ActivityLog, Party, MonsterInstance } from './types.ts';
 import type { ActionContext, ActionDefinition, ActionEffect } from './ai/types.ts';
 import { AdventurerAI } from './ai/AdventurerAI.ts';
 import { ALL_ACTIONS } from './ai/actions.ts';
 import { getFoodConfig } from './foodConfig.ts';
 import { getEquipmentDef, findBestAffordable } from './equipmentConfig.ts';
+import { getDungeonDef, selectDungeonForParty } from './dungeonConfig.ts';
+import { getMonsterDef } from './monsterConfig.ts';
+import { PRESET_ADVENTURERS, getAdventurerCap, generateRandomAdventurer, getRole } from './adventurerConfig.ts';
+
+const COMBAT_TICK_INTERVAL = 2000; // 战斗回合间隔：2秒
 
 function getEffectiveStats(adv: Adventurer): { attack: number; defense: number; maxHp: number } {
   let attack = adv.attack;
@@ -41,7 +46,12 @@ export class WorldSystem {
     const now = Date.now();
     let changed = false;
 
-    // 先处理工会大厅队伍计时
+    // 先处理冒险者生成
+    if (this._tickSpawn(state, now)) {
+      changed = true;
+    }
+
+    // 处理工会大厅队伍计时
     if (this._tickGuildHall(state, now)) {
       changed = true;
     }
@@ -171,10 +181,11 @@ export class WorldSystem {
       newXp -= newXpToNext;
       newLevel += 1;
       newXpToNext = Math.floor(newXpToNext * 1.5);
-      newMaxHp += 5 + Math.floor(Math.random() * 6);
+      const hpGain = 5 + Math.floor(Math.random() * 6);
+      newMaxHp += hpGain;
+      newHp += hpGain; // 只增加升级获得的HP
       newAttack += 1 + Math.floor(Math.random() * 3);
       newDefense += 1 + Math.floor(Math.random() * 2);
-      newHp = newMaxHp; // 升级满血
     }
 
     const goldEarned = eff.goldDelta ?? 0;
@@ -281,6 +292,19 @@ export class WorldSystem {
     let adv = { ...adventurer, equipment: { ...adventurer.equipment } };
     const slots: Array<'weapon' | 'armor'> = [];
 
+    // 构建库存可用装备ID集合
+    const availableIds = new Set<string>();
+    for (const stock of state.storeEquipment) {
+      if (stock.quantity > 0) {
+        availableIds.add(stock.equipmentId);
+      }
+    }
+
+    // 库存为空则直接返回
+    if (availableIds.size === 0) {
+      return { adventurer: adv };
+    }
+
     // 优先空槽位
     if (!adv.equipment.weapon) { slots.unshift('weapon'); }
     if (!adv.equipment.armor) { slots.unshift('armor'); }
@@ -290,7 +314,7 @@ export class WorldSystem {
 
     for (const slot of slots) {
       const currentId = adv.equipment[slot];
-      const best = findBestAffordable(slot, adv.gold, currentId);
+      const best = findBestAffordable(slot, adv.gold, currentId, availableIds);
       if (!best) { continue; }
 
       // 扣冒险者金币，玩家获得金币
@@ -300,6 +324,11 @@ export class WorldSystem {
         equipment: { ...adv.equipment, [slot]: best.id },
       };
       state.gold += best.price;
+
+      // 扣除库存
+      state.storeEquipment = state.storeEquipment.map((s) =>
+        s.equipmentId === best.id ? { ...s, quantity: s.quantity - 1 } : s
+      );
 
       // 生成购买日志
       const log: ActivityLog = {
@@ -325,6 +354,44 @@ export class WorldSystem {
   /**
    * 内部：处理工会大厅队伍计时
    */
+  private _tickSpawn(state: GameState, now: number): boolean {
+    const guildHall = state.buildings.find((b) => b.id === 'guild-hall');
+    const cap = getAdventurerCap(guildHall?.level ?? 0);
+
+    if (state.adventurers.length >= cap) {
+      return false;
+    }
+    if (now - state.lastSpawnTime < 5000) {
+      return false;
+    }
+
+    const index = state.nextAdventurerIndex;
+    const id = `adventurer-${index + 1}`;
+    let newAdventurer;
+
+    if (index < PRESET_ADVENTURERS.length) {
+      newAdventurer = { ...PRESET_ADVENTURERS[index], id };
+    } else {
+      newAdventurer = generateRandomAdventurer(id, state.adventurers);
+    }
+
+    state.adventurers = [...state.adventurers, newAdventurer];
+    state.nextAdventurerIndex = index + 1;
+    state.lastSpawnTime = now;
+
+    // 活动日志
+    const log: ActivityLog = {
+      id: `log-${now}-spawn-${id}`,
+      timestamp: now,
+      adventurerName: newAdventurer.name,
+      actionLabel: '加入了冒险者公会',
+      effects: {},
+    };
+    state.activityLogs = [...state.activityLogs, log].slice(-100);
+
+    return true;
+  }
+
   private _tickGuildHall(state: GameState, now: number): boolean {
     let changed = false;
 
@@ -336,13 +403,34 @@ export class WorldSystem {
     }
     state.guildHall.formingParties = state.guildHall.formingParties.filter((p) => now < p.formingDeadline);
 
-    // 检查副本中的队伍是否完成
-    const completedParties = state.guildHall.raidingParties.filter((p) => p.raidEndTime !== null && now >= p.raidEndTime);
-    for (const party of completedParties) {
-      this._completeRaid(party, state);
-      changed = true;
+    // 处理副本中的队伍
+    const completedParties: Party[] = [];
+    for (const party of state.guildHall.raidingParties) {
+      const dungeon = party.dungeonId ? getDungeonDef(party.dungeonId) : null;
+
+      // 有 waves 配置：使用战斗系统
+      if (dungeon && dungeon.waves && dungeon.waves.length > 0) {
+        const result = this._tickCombat(party, state, now);
+        if (result === 'changed') {
+          changed = true;
+        } else if (result === 'completed' || result === 'failed') {
+          completedParties.push(party);
+          changed = true;
+        }
+      } else {
+        // 无 waves：保持原有时间制逻辑
+        if (party.raidEndTime !== null && now >= party.raidEndTime) {
+          this._completeRaid(party, state);
+          completedParties.push(party);
+          changed = true;
+        }
+      }
     }
-    state.guildHall.raidingParties = state.guildHall.raidingParties.filter((p) => p.raidEndTime === null || now < p.raidEndTime);
+
+    // 移除已完成的队伍
+    state.guildHall.raidingParties = state.guildHall.raidingParties.filter(
+      (p) => !completedParties.includes(p)
+    );
 
     return changed;
   }
@@ -352,22 +440,49 @@ export class WorldSystem {
    */
   private _joinOrCreateParty(adventurer: Adventurer, state: GameState): Adventurer {
     const now = Date.now();
+    const role = getRole(adventurer.class);
 
-    // 查找有空位的队伍
-    let party = state.guildHall.formingParties.find((p) => p.memberIds.length < 4);
+    // 查找有对应职能空位的队伍
+    let party = state.guildHall.formingParties.find((p) => {
+      if (!p.roleSlots) { return false; }
+      if (role === 'tank') { return p.roleSlots.tank === null; }
+      if (role === 'dps') { return p.roleSlots.dps1 === null || p.roleSlots.dps2 === null; }
+      if (role === 'healer') { return p.roleSlots.healer === null; }
+      return false;
+    });
 
     if (!party) {
       // 创建新队伍
       party = {
         id: now + '-' + Math.random().toString(36).substring(2, 9),
+        name: `${adventurer.name}的小队`,
         memberIds: [],
         status: 'forming',
         createdAt: now,
         formingDeadline: now + 60000,
         raidStartTime: null,
         raidEndTime: null,
+        dungeonId: null,
+        waveState: null,
+        completedWaves: 0,
+        totalWaves: 0,
+        accumulatedRewards: { gold: 0, xp: 0 },
+        roleSlots: { tank: null, dps1: null, dps2: null, healer: null },
       };
       state.guildHall.formingParties.push(party);
+    }
+
+    // 填入对应槽位
+    if (role === 'tank') {
+      party.roleSlots!.tank = adventurer.id;
+    } else if (role === 'dps') {
+      if (party.roleSlots!.dps1 === null) {
+        party.roleSlots!.dps1 = adventurer.id;
+      } else {
+        party.roleSlots!.dps2 = adventurer.id;
+      }
+    } else if (role === 'healer') {
+      party.roleSlots!.healer = adventurer.id;
     }
 
     // 加入队伍
@@ -384,8 +499,9 @@ export class WorldSystem {
     };
     state.activityLogs = [...state.activityLogs, log].slice(-100);
 
-    // 满4人时开始副本
-    if (party.memberIds.length >= 4) {
+    // 所有槽位非 null 时开始副本
+    const slots = party.roleSlots!;
+    if (slots.tank !== null && slots.dps1 !== null && slots.dps2 !== null && slots.healer !== null) {
       this._startRaid(party, state);
     }
 
@@ -406,22 +522,58 @@ export class WorldSystem {
   private _startRaid(party: Party, state: GameState): void {
     const now = Date.now();
 
+    // 计算队伍平均等级
+    const members = party.memberIds
+      .map((id) => state.adventurers.find((a) => a.id === id))
+      .filter((a): a is Adventurer => a !== undefined);
+    const avgLevel = members.length > 0
+      ? Math.floor(members.reduce((sum, m) => sum + m.level, 0) / members.length)
+      : 1;
+
+    // 获取工会大厅等级
+    const guildHall = state.buildings.find((b) => b.id === 'guild-hall');
+    const guildHallLevel = guildHall ? guildHall.level : 0;
+
+    // 选择副本
+    const dungeon = selectDungeonForParty(avgLevel, guildHallLevel, state.guildHall.dungeonRecords);
+    const hasCombatWaves = dungeon && dungeon.waves && dungeon.waves.length > 0;
+
     // 从 formingParties 移到 raidingParties
     state.guildHall.formingParties = state.guildHall.formingParties.filter((p) => p.id !== party.id);
     party.status = 'raiding';
     party.raidStartTime = now;
-    party.raidEndTime = now + 20000;
+    party.dungeonId = dungeon ? dungeon.id : null;
+
+    // 初始化战斗相关字段
+    if (hasCombatWaves) {
+      party.raidEndTime = null; // 战斗制副本不使用固定结束时间
+      party.totalWaves = dungeon!.waves!.length;
+      party.completedWaves = 0;
+      party.accumulatedRewards = { gold: 0, xp: 0 };
+      // 初始化第一轮战斗
+      this._initWave(party, 0, dungeon!, state);
+    } else {
+      // 时间制副本
+      const dungeonDuration = dungeon ? dungeon.duration : 20000;
+      party.raidEndTime = now + dungeonDuration;
+      party.totalWaves = 0;
+      party.completedWaves = 0;
+      party.accumulatedRewards = { gold: 0, xp: 0 };
+      party.waveState = null;
+    }
+
     state.guildHall.raidingParties.push(party);
 
     // 更新所有成员状态为 raiding
     const memberNames: string[] = [];
+    const dungeonName = dungeon ? dungeon.name : '未知副本';
     state.adventurers = state.adventurers.map((adv) => {
       if (party.memberIds.includes(adv.id)) {
         memberNames.push(adv.name);
         return {
           ...adv,
           status: 'raiding' as const,
-          actionLabel: '正在攻略副本',
+          actionLabel: `正在攻略${dungeonName}`,
           actionEndTime: party.raidEndTime,
         };
       }
@@ -433,7 +585,7 @@ export class WorldSystem {
       id: now + '-' + Math.random().toString(36).substring(2, 9),
       timestamp: now,
       adventurerName: memberNames.join('、'),
-      actionLabel: '队伍满员，开始攻略副本',
+      actionLabel: `队伍满员，开始攻略${dungeonName}`,
       effects: {},
       levelUp: false,
     };
@@ -446,19 +598,54 @@ export class WorldSystem {
   private _completeRaid(party: Party, state: GameState): void {
     const now = Date.now();
 
+    // 获取副本配置
+    const dungeon = party.dungeonId ? getDungeonDef(party.dungeonId) : null;
+    const dungeonName = dungeon ? dungeon.name : '未知副本';
+
+    // 更新通关记录
+    if (dungeon) {
+      const existingRecord = state.guildHall.dungeonRecords.find((r) => r.dungeonId === dungeon.id);
+      if (existingRecord) {
+        existingRecord.clearCount += 1;
+        existingRecord.lastClearTime = now;
+      } else {
+        state.guildHall.dungeonRecords.push({
+          dungeonId: dungeon.id,
+          clearCount: 1,
+          lastClearTime: now,
+        });
+      }
+    }
+
     state.adventurers = state.adventurers.map((adv) => {
       if (!party.memberIds.includes(adv.id)) {
         return adv;
       }
 
-      // 扣除30%-50%生命值
-      const hpLossPercent = 0.3 + Math.random() * 0.2;
+      // 根据副本配置计算HP损失
+      let hpLossMin = 0.3;
+      let hpLossMax = 0.5;
+      let baseXp = 50;
+      let xpPerLevel = 10;
+      let baseGold = 20;
+      let goldPerLevel = 5;
+
+      if (dungeon) {
+        hpLossMin = dungeon.rewards.hpLossMin;
+        hpLossMax = dungeon.rewards.hpLossMax;
+        baseXp = dungeon.rewards.baseXp;
+        xpPerLevel = dungeon.rewards.xpPerLevel;
+        baseGold = dungeon.rewards.baseGold;
+        goldPerLevel = dungeon.rewards.goldPerLevel;
+      }
+
+      const hpLossPercent = hpLossMin + Math.random() * (hpLossMax - hpLossMin);
       const hpLoss = Math.floor(adv.maxHp * hpLossPercent);
       let newHp = Math.max(1, adv.hp - hpLoss);
 
       // 奖励经验和金币
-      const xpGain = 50 + adv.level * 10 + Math.floor(Math.random() * 20);
-      const goldGain = 20 + adv.level * 5 + Math.floor(Math.random() * 10);
+      const xpGain = baseXp + adv.level * xpPerLevel + Math.floor(Math.random() * 20);
+      const goldGain = baseGold + adv.level * goldPerLevel + Math.floor(Math.random() * 10);
 
       let newXp = adv.xp + xpGain;
       let newLevel = adv.level;
@@ -473,10 +660,11 @@ export class WorldSystem {
         newXp -= newXpToNext;
         newLevel += 1;
         newXpToNext = Math.floor(newXpToNext * 1.5);
-        newMaxHp += 5 + Math.floor(Math.random() * 6);
+        const hpGain = 5 + Math.floor(Math.random() * 6);
+        newMaxHp += hpGain;
+        newHp += hpGain; // 只增加升级获得的HP
         newAttack += 1 + Math.floor(Math.random() * 3);
         newDefense += 1 + Math.floor(Math.random() * 2);
-        newHp = newMaxHp;
         leveledUp = true;
       }
 
@@ -485,7 +673,7 @@ export class WorldSystem {
         id: now + '-' + adv.id + '-' + Math.random().toString(36).substring(2, 9),
         timestamp: now,
         adventurerName: adv.name,
-        actionLabel: '完成副本攻略',
+        actionLabel: `完成${dungeonName}攻略`,
         effects: {
           goldDelta: goldGain,
           xpDelta: xpGain,
@@ -551,5 +739,352 @@ export class WorldSystem {
       };
       state.activityLogs = [...state.activityLogs, log].slice(-100);
     }
+  }
+
+  /**
+   * 内部：计算伤害
+   */
+  private _calculateDamage(attack: number, defense: number): number {
+    const baseDamage = Math.max(1, attack - defense * 0.5);
+    const randomFactor = 0.8 + Math.random() * 0.4; // 0.8 ~ 1.2
+    return Math.floor(baseDamage * randomFactor);
+  }
+
+  /**
+   * 内部：初始化战斗轮次
+   */
+  private _initWave(party: Party, waveIndex: number, dungeon: ReturnType<typeof getDungeonDef>, state: GameState): void {
+    if (!dungeon || !dungeon.waves || waveIndex >= dungeon.waves.length) {
+      return;
+    }
+
+    const wave = dungeon.waves[waveIndex];
+    const now = Date.now();
+
+    // 创建怪物实例
+    const monsters: MonsterInstance[] = wave.monsterIds.map((monsterId) => {
+      const def = getMonsterDef(monsterId);
+      return {
+        defId: monsterId,
+        hp: def ? def.maxHp : 30,
+        maxHp: def ? def.maxHp : 30,
+      };
+    });
+
+    // 记录冒险者当前 HP
+    const adventurerHp: Record<string, number> = {};
+    for (const memberId of party.memberIds) {
+      const adv = state.adventurers.find((a) => a.id === memberId);
+      if (adv) {
+        adventurerHp[memberId] = adv.hp;
+      }
+    }
+
+    party.waveState = {
+      waveIndex,
+      monsters,
+      adventurerHp,
+      lastTickTime: now,
+    };
+
+    // 生成日志
+    const log: ActivityLog = {
+      id: now + '-wave-' + waveIndex,
+      timestamp: now,
+      adventurerName: '队伍',
+      actionLabel: `进入第 ${waveIndex + 1}/${party.totalWaves} 轮战斗`,
+      effects: {},
+      levelUp: false,
+    };
+    state.activityLogs = [...state.activityLogs, log].slice(-100);
+  }
+
+  /**
+   * 内部：执行战斗回合
+   * 返回: 'unchanged' | 'changed' | 'completed' | 'failed'
+   */
+  private _tickCombat(party: Party, state: GameState, now: number): 'unchanged' | 'changed' | 'completed' | 'failed' {
+    if (!party.waveState) {
+      return 'unchanged';
+    }
+
+    // 检查是否到达战斗回合时间
+    if (now - party.waveState.lastTickTime < COMBAT_TICK_INTERVAL) {
+      return 'unchanged';
+    }
+
+    party.waveState.lastTickTime = now;
+
+    const dungeon = party.dungeonId ? getDungeonDef(party.dungeonId) : null;
+    if (!dungeon || !dungeon.waves) {
+      return 'unchanged';
+    }
+
+    // 获取存活的冒险者和怪物
+    const aliveAdventurers = party.memberIds
+      .map((id) => state.adventurers.find((a) => a.id === id))
+      .filter((a): a is Adventurer => a !== undefined && party.waveState!.adventurerHp[a.id] > 0);
+
+    const aliveMonsters = party.waveState.monsters.filter((m) => m.hp > 0);
+
+    // 冒险者攻击怪物
+    for (const adv of aliveAdventurers) {
+      if (aliveMonsters.length === 0) { break; }
+      const target = aliveMonsters[Math.floor(Math.random() * aliveMonsters.length)];
+      const effStats = getEffectiveStats(adv);
+      const monsterDef = getMonsterDef(target.defId);
+      const monsterDefense = monsterDef ? monsterDef.defense : 0;
+      const damage = this._calculateDamage(effStats.attack, monsterDefense);
+      target.hp = Math.max(0, target.hp - damage);
+    }
+
+    // 怪物攻击冒险者
+    const stillAliveMonsters = party.waveState.monsters.filter((m) => m.hp > 0);
+    for (const monster of stillAliveMonsters) {
+      const stillAliveAdventurers = party.memberIds
+        .map((id) => state.adventurers.find((a) => a.id === id))
+        .filter((a): a is Adventurer => a !== undefined && party.waveState!.adventurerHp[a.id] > 0);
+
+      if (stillAliveAdventurers.length === 0) { break; }
+
+      const target = stillAliveAdventurers[Math.floor(Math.random() * stillAliveAdventurers.length)];
+      const monsterDef = getMonsterDef(monster.defId);
+      const monsterAttack = monsterDef ? monsterDef.attack : 8;
+      const effStats = getEffectiveStats(target);
+      const damage = this._calculateDamage(monsterAttack, effStats.defense);
+      party.waveState.adventurerHp[target.id] = Math.max(0, party.waveState.adventurerHp[target.id] - damage);
+    }
+
+    // 同步冒险者 HP 到 state
+    state.adventurers = state.adventurers.map((adv) => {
+      if (party.memberIds.includes(adv.id) && party.waveState) {
+        const newHp = party.waveState.adventurerHp[adv.id];
+        if (newHp !== undefined && newHp !== adv.hp) {
+          return { ...adv, hp: newHp };
+        }
+      }
+      return adv;
+    });
+
+    // 检查战斗结果
+    const finalAliveAdventurers = party.memberIds
+      .filter((id) => party.waveState!.adventurerHp[id] > 0);
+    const finalAliveMonsters = party.waveState.monsters.filter((m) => m.hp > 0);
+
+    // 队伍全灭
+    if (finalAliveAdventurers.length === 0) {
+      this._failRaid(party, state);
+      return 'failed';
+    }
+
+    // 怪物全灭 - 结算本轮奖励
+    if (finalAliveMonsters.length === 0) {
+      this._settleWaveRewards(party, dungeon);
+      party.completedWaves += 1;
+
+      // 检查是否通关
+      if (party.completedWaves >= party.totalWaves) {
+        this._completeRaidWithCombat(party, dungeon, state);
+        return 'completed';
+      }
+
+      // 进入下一轮
+      this._initWave(party, party.completedWaves, dungeon, state);
+    }
+
+    return 'changed';
+  }
+
+  /**
+   * 内部：结算单轮奖励
+   */
+  private _settleWaveRewards(party: Party, dungeon: ReturnType<typeof getDungeonDef>): void {
+    if (!dungeon || !dungeon.waves || !party.waveState) {
+      return;
+    }
+
+    const wave = dungeon.waves[party.waveState.waveIndex];
+    let totalGold = wave.bonusGold ?? 0;
+    let totalXp = wave.bonusXp ?? 0;
+
+    // 累加击杀奖励
+    for (const monster of party.waveState.monsters) {
+      const def = getMonsterDef(monster.defId);
+      if (def) {
+        totalGold += def.goldReward;
+        totalXp += def.xpReward;
+      }
+    }
+
+    party.accumulatedRewards.gold += totalGold;
+    party.accumulatedRewards.xp += totalXp;
+  }
+
+  /**
+   * 内部：副本失败处理
+   */
+  private _failRaid(party: Party, state: GameState): void {
+    const now = Date.now();
+    const dungeon = party.dungeonId ? getDungeonDef(party.dungeonId) : null;
+    const dungeonName = dungeon ? dungeon.name : '未知副本';
+
+    // 失败惩罚：获得已累计奖励的 50%
+    const goldReward = Math.floor(party.accumulatedRewards.gold * 0.5);
+    const xpReward = Math.floor(party.accumulatedRewards.xp * 0.5);
+    const xpPerMember = Math.floor(xpReward / party.memberIds.length);
+
+    state.adventurers = state.adventurers.map((adv) => {
+      if (!party.memberIds.includes(adv.id)) {
+        return adv;
+      }
+
+      let newXp = adv.xp + xpPerMember;
+      let newLevel = adv.level;
+      let newXpToNext = adv.xpToNext;
+      let newMaxHp = adv.maxHp;
+      let newAttack = adv.attack;
+      let newDefense = adv.defense;
+      let leveledUp = false;
+
+      // 升级检查
+      while (newXp >= newXpToNext) {
+        newXp -= newXpToNext;
+        newLevel += 1;
+        newXpToNext = Math.floor(newXpToNext * 1.5);
+        newMaxHp += 5 + Math.floor(Math.random() * 6);
+        newAttack += 1 + Math.floor(Math.random() * 3);
+        newDefense += 1 + Math.floor(Math.random() * 2);
+        leveledUp = true;
+      }
+
+      // 生成日志
+      const log: ActivityLog = {
+        id: now + '-' + adv.id + '-fail',
+        timestamp: now,
+        adventurerName: adv.name,
+        actionLabel: `${dungeonName}攻略失败，队伍全灭`,
+        effects: {
+          goldDelta: Math.floor(goldReward / party.memberIds.length),
+          xpDelta: xpPerMember,
+        },
+        levelUp: leveledUp,
+      };
+      state.activityLogs = [...state.activityLogs, log].slice(-100);
+
+      return {
+        ...adv,
+        hp: 1, // 全灭后 HP 为 1
+        xp: newXp,
+        level: newLevel,
+        xpToNext: newXpToNext,
+        maxHp: newMaxHp,
+        attack: newAttack,
+        defense: newDefense,
+        gold: adv.gold + Math.floor(goldReward / party.memberIds.length),
+        status: 'idle' as const,
+        currentActionId: null,
+        actionStartTime: null,
+        actionEndTime: null,
+        actionLabel: null,
+        currentBuildingId: null,
+      };
+    });
+  }
+
+  /**
+   * 内部：战斗制副本通关
+   */
+  private _completeRaidWithCombat(party: Party, dungeon: ReturnType<typeof getDungeonDef>, state: GameState): void {
+    const now = Date.now();
+    const dungeonName = dungeon ? dungeon.name : '未知副本';
+
+    // 更新通关记录
+    if (dungeon) {
+      const existingRecord = state.guildHall.dungeonRecords.find((r) => r.dungeonId === dungeon.id);
+      if (existingRecord) {
+        existingRecord.clearCount += 1;
+        existingRecord.lastClearTime = now;
+      } else {
+        state.guildHall.dungeonRecords.push({
+          dungeonId: dungeon.id,
+          clearCount: 1,
+          lastClearTime: now,
+        });
+      }
+    }
+
+    // 计算总奖励（累计奖励 + 通关奖励）
+    let totalGold = party.accumulatedRewards.gold;
+    let totalXp = party.accumulatedRewards.xp;
+    if (dungeon && dungeon.clearBonus) {
+      totalGold += dungeon.clearBonus.gold;
+      totalXp += dungeon.clearBonus.xp;
+    }
+
+    const goldPerMember = Math.floor(totalGold / party.memberIds.length);
+    const xpPerMember = Math.floor(totalXp / party.memberIds.length);
+
+    state.adventurers = state.adventurers.map((adv) => {
+      if (!party.memberIds.includes(adv.id)) {
+        return adv;
+      }
+
+      // 使用 waveState 中记录的 HP
+      const currentHp = party.waveState ? (party.waveState.adventurerHp[adv.id] ?? adv.hp) : adv.hp;
+
+      let newXp = adv.xp + xpPerMember;
+      let newLevel = adv.level;
+      let newXpToNext = adv.xpToNext;
+      let newMaxHp = adv.maxHp;
+      let newAttack = adv.attack;
+      let newDefense = adv.defense;
+      let newHp = currentHp;
+      let leveledUp = false;
+
+      // 升级检查
+      while (newXp >= newXpToNext) {
+        newXp -= newXpToNext;
+        newLevel += 1;
+        newXpToNext = Math.floor(newXpToNext * 1.5);
+        const hpGain = 5 + Math.floor(Math.random() * 6);
+        newMaxHp += hpGain;
+        newHp += hpGain; // 只增加升级获得的HP
+        newAttack += 1 + Math.floor(Math.random() * 3);
+        newDefense += 1 + Math.floor(Math.random() * 2);
+        leveledUp = true;
+      }
+
+      // 生成日志
+      const log: ActivityLog = {
+        id: now + '-' + adv.id + '-clear',
+        timestamp: now,
+        adventurerName: adv.name,
+        actionLabel: `完成${dungeonName}攻略`,
+        effects: {
+          goldDelta: goldPerMember,
+          xpDelta: xpPerMember,
+        },
+        levelUp: leveledUp,
+      };
+      state.activityLogs = [...state.activityLogs, log].slice(-100);
+
+      return {
+        ...adv,
+        hp: newHp,
+        xp: newXp,
+        level: newLevel,
+        xpToNext: newXpToNext,
+        maxHp: newMaxHp,
+        attack: newAttack,
+        defense: newDefense,
+        gold: adv.gold + goldPerMember,
+        status: 'idle' as const,
+        currentActionId: null,
+        actionStartTime: null,
+        actionEndTime: null,
+        actionLabel: null,
+        currentBuildingId: null,
+      };
+    });
   }
 }
