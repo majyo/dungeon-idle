@@ -14,7 +14,10 @@
       "Bash(wc:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(git push:*)",
+      "Bash(\"D:/workspace/app_projects/dungeon-idle/src/core/combat/combatEngine.ts\":*)",
+      "Bash(npm run lint:*)"
     ]
   }
 }
