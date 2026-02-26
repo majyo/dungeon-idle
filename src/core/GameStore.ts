@@ -1,7 +1,9 @@
-import type { GameState } from './types.ts';
+import type { GameState, FarmPlot, ProcessingSlot } from './types.ts';
 import { EventEmitter } from './EventEmitter.ts';
 import { createInitialState } from './initialState.ts';
 import { WorldSystem } from './WorldSystem.ts';
+import { getCropConfig } from './cropConfig.ts';
+import { getRecipeConfig } from './recipeConfig.ts';
 
 export class GameStore {
   private static _instance: GameStore | null = null;
@@ -28,6 +30,38 @@ export class GameStore {
 
   get State(): GameState {
     return this._snapshot;
+  }
+
+  /** 确保农场地块与农场等级一致（修复旧存档缺失地块的问题） */
+  ensureFarmPlots(): void {
+    const farm = this._state.buildings.find((b) => b.id === 'farm');
+    if (!farm || farm.level === 0) { return; }
+    const targetPlots = farm.level * 2;
+    const currentPlots = this._state.farmPlots.length;
+    if (targetPlots > currentPlots) {
+      const newPlots: FarmPlot[] = [];
+      for (let i = currentPlots; i < targetPlots; i++) {
+        newPlots.push({ id: i, status: 'empty', cropId: null, plantTime: null, growthDuration: null });
+      }
+      this._state.farmPlots = [...this._state.farmPlots, ...newPlots];
+      this._notify();
+    }
+  }
+
+  /** 确保加工槽位与厨房等级一致 */
+  ensureProcessingSlots(): void {
+    const kitchen = this._state.buildings.find((b) => b.id === 'kitchen');
+    if (!kitchen || kitchen.level === 0) { return; }
+    const targetSlots = kitchen.level;
+    const currentSlots = this._state.processingSlots.length;
+    if (targetSlots > currentSlots) {
+      const newSlots: ProcessingSlot[] = [];
+      for (let i = currentSlots; i < targetSlots; i++) {
+        newSlots.push({ id: i, status: 'idle', recipeId: null, startTime: null, processingTime: null });
+      }
+      this._state.processingSlots = [...this._state.processingSlots, ...newSlots];
+      this._notify();
+    }
   }
 
   subscribe(listener: () => void): () => void {
@@ -212,6 +246,38 @@ export class GameStore {
     );
     this._state.buildingConstruction = null;
 
+    // 农场升级时扩展地块
+    if (buildingId === 'farm') {
+      const farm = this._state.buildings.find((b) => b.id === 'farm');
+      if (farm) {
+        const targetPlots = farm.level * 2;
+        const currentPlots = this._state.farmPlots.length;
+        if (targetPlots > currentPlots) {
+          const newPlots: FarmPlot[] = [];
+          for (let i = currentPlots; i < targetPlots; i++) {
+            newPlots.push({ id: i, status: 'empty', cropId: null, plantTime: null, growthDuration: null });
+          }
+          this._state.farmPlots = [...this._state.farmPlots, ...newPlots];
+        }
+      }
+    }
+
+    // 厨房升级时扩展加工槽位
+    if (buildingId === 'kitchen') {
+      const kitchen = this._state.buildings.find((b) => b.id === 'kitchen');
+      if (kitchen) {
+        const targetSlots = kitchen.level;
+        const currentSlots = this._state.processingSlots.length;
+        if (targetSlots > currentSlots) {
+          const newSlots: ProcessingSlot[] = [];
+          for (let i = currentSlots; i < targetSlots; i++) {
+            newSlots.push({ id: i, status: 'idle', recipeId: null, startTime: null, processingTime: null });
+          }
+          this._state.processingSlots = [...this._state.processingSlots, ...newSlots];
+        }
+      }
+    }
+
     this._notify();
   }
 
@@ -254,6 +320,170 @@ export class GameStore {
       ];
     }
     this._notify();
+  }
+
+  plantCrop(plotId: number, cropId: string): void {
+    const plot = this._state.farmPlots.find((p) => p.id === plotId);
+    if (!plot || plot.status !== 'empty') {
+      return;
+    }
+
+    const crop = getCropConfig(cropId);
+    if (!crop) {
+      return;
+    }
+
+    // 检查农耕技能等级
+    const skill = this._state.skills.find((s) => s.id === 'farming');
+    if (!skill || skill.level < crop.levelRequired) {
+      return;
+    }
+
+    // 检查农场建筑等级
+    const farm = this._state.buildings.find((b) => b.id === 'farm');
+    if (!farm || farm.level < crop.requiredFarmLevel) {
+      return;
+    }
+
+    this._state.farmPlots = this._state.farmPlots.map((p) =>
+      p.id === plotId
+        ? { ...p, status: 'growing' as const, cropId, plantTime: Date.now(), growthDuration: crop.growthDuration }
+        : p
+    );
+    this._notify();
+  }
+
+  harvestCrop(plotId: number): void {
+    const plot = this._state.farmPlots.find((p) => p.id === plotId);
+    if (!plot || plot.status !== 'ready' || !plot.cropId) {
+      return;
+    }
+
+    const crop = getCropConfig(plot.cropId);
+    if (!crop) {
+      return;
+    }
+
+    // 给予农耕经验
+    const skill = this._state.skills.find((s) => s.id === 'farming');
+    if (skill) {
+      skill.xp += crop.xpPerHarvest;
+      while (skill.xp >= skill.xpToNext) {
+        skill.xp -= skill.xpToNext;
+        skill.level += 1;
+        skill.xpToNext = Math.floor(100 * Math.pow(1.5, skill.level - 1));
+      }
+      this._state.skills = this._state.skills.map((s) =>
+        s.id === 'farming' ? { ...skill } : s
+      );
+    }
+
+    // 产出加入背包
+    const { id, name, description } = crop.yieldItem;
+    const existing = this._state.inventory.find((item) => item.id === id);
+    if (existing) {
+      existing.quantity += crop.yieldQuantity;
+      this._state.inventory = this._state.inventory.map((item) =>
+        item.id === id ? { ...existing } : item
+      );
+    } else {
+      this._state.inventory = [
+        ...this._state.inventory,
+        { id, name, description, quantity: crop.yieldQuantity, type: 'material' as const },
+      ];
+    }
+
+    // 重置地块
+    this._state.farmPlots = this._state.farmPlots.map((p) =>
+      p.id === plotId
+        ? { ...p, status: 'empty' as const, cropId: null, plantTime: null, growthDuration: null }
+        : p
+    );
+    this._notify();
+  }
+
+  startProcessing(slotId: number, recipeId: string): void {
+    const slot = this._state.processingSlots.find((s) => s.id === slotId);
+    if (!slot || slot.status !== 'idle') {
+      return;
+    }
+
+    const recipe = getRecipeConfig(recipeId);
+    if (!recipe) {
+      return;
+    }
+
+    // 检查厨房等级
+    const kitchen = this._state.buildings.find((b) => b.id === 'kitchen');
+    if (!kitchen || kitchen.level < recipe.requiredKitchenLevel) {
+      return;
+    }
+
+    // 检查材料是否足够
+    for (const ing of recipe.ingredients) {
+      const item = this._state.inventory.find((i) => i.id === ing.itemId);
+      if (!item || item.quantity < ing.amount) {
+        return;
+      }
+    }
+
+    // 扣除材料
+    for (const ing of recipe.ingredients) {
+      const existing = this._state.inventory.find((i) => i.id === ing.itemId);
+      if (existing) {
+        existing.quantity -= ing.amount;
+        this._state.inventory = this._state.inventory.map((i) =>
+          i.id === ing.itemId ? { ...existing } : i
+        );
+      }
+    }
+
+    // 开始加工
+    this._state.processingSlots = this._state.processingSlots.map((s) =>
+      s.id === slotId
+        ? { ...s, status: 'processing' as const, recipeId, startTime: Date.now(), processingTime: recipe.processingTime }
+        : s
+    );
+    this._notify();
+  }
+
+  private _tickProcessing(): void {
+    const now = Date.now();
+    let changed = false;
+    this._state.processingSlots = this._state.processingSlots.map((slot) => {
+      if (slot.status === 'processing' && slot.startTime !== null && slot.processingTime !== null) {
+        if (now >= slot.startTime + slot.processingTime) {
+          // 加工完成，产出食物加入酒馆库存
+          const recipe = slot.recipeId ? getRecipeConfig(slot.recipeId) : undefined;
+          if (recipe) {
+            this.stockTavernFood(recipe.outputFoodId, recipe.outputQuantity);
+          }
+          changed = true;
+          return { ...slot, status: 'idle' as const, recipeId: null, startTime: null, processingTime: null };
+        }
+      }
+      return slot;
+    });
+    if (changed) {
+      this._notify();
+    }
+  }
+
+  private _tickFarm(): void {
+    const now = Date.now();
+    let changed = false;
+    this._state.farmPlots = this._state.farmPlots.map((plot) => {
+      if (plot.status === 'growing' && plot.plantTime !== null && plot.growthDuration !== null) {
+        if (now >= plot.plantTime + plot.growthDuration) {
+          changed = true;
+          return { ...plot, status: 'ready' as const };
+        }
+      }
+      return plot;
+    });
+    if (changed) {
+      this._notify();
+    }
   }
 
   startGathering(skillId: 'woodcutting' | 'mining', nodeId: string): void {
@@ -327,6 +557,8 @@ export class GameStore {
     }
     this._decisionTimer = setInterval(() => {
       this._tickAdventurers();
+      this._tickFarm();
+      this._tickProcessing();
     }, 1000);
     this._gatheringTimer = setInterval(() => {
       this._tickGathering();

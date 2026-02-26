@@ -12,12 +12,16 @@ import { AdventurerPage } from './pages/AdventurerPage/AdventurerPage.tsx';
 import { DebugPage } from './pages/DebugPage/DebugPage.tsx';
 import { GuildHallPage } from './pages/GuildHallPage/GuildHallPage.tsx';
 import { DungeonPage } from './pages/DungeonPage/DungeonPage.tsx';
+import { FarmingPage } from './pages/FarmingPage/FarmingPage.tsx';
+import { KitchenPage } from './pages/KitchenPage/KitchenPage.tsx';
 
-type TabId = 'woodcutting' | 'mining' | 'building' | 'adventurer' | 'guild-hall' | 'dungeon' | 'shop' | 'inventory' | 'debug';
+type TabId = 'woodcutting' | 'mining' | 'farming' | 'kitchen' | 'building' | 'adventurer' | 'guild-hall' | 'dungeon' | 'shop' | 'inventory' | 'debug';
 
 const TABS = [
   { id: 'woodcutting' as const, label: '伐木', icon: '🪓' },
   { id: 'mining' as const, label: '采矿', icon: '⛏️' },
+  { id: 'farming' as const, label: '农场', icon: '🌾' },
+  { id: 'kitchen' as const, label: '厨房', icon: '🍳' },
   { id: 'building' as const, label: '建筑', icon: '🏗️' },
   { id: 'adventurer' as const, label: '冒险者', icon: '🧙' },
   { id: 'guild-hall' as const, label: '队伍', icon: '👥' },
@@ -34,6 +38,12 @@ function renderPage(tabId: TabId) {
     }
     case 'mining': {
       return <MiningPage />;
+    }
+    case 'farming': {
+      return <FarmingPage />;
+    }
+    case 'kitchen': {
+      return <KitchenPage />;
     }
     case 'building': {
       return <BuildingPage />;

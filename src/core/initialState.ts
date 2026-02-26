@@ -6,7 +6,7 @@ export function createInitialState(): GameState {
     skills: [
       { id: 'mining', name: '采矿', level: 1, xp: 0, xpToNext: 100 },
       { id: 'woodcutting', name: '伐木', level: 1, xp: 0, xpToNext: 100 },
-      { id: 'fishing', name: '钓鱼', level: 1, xp: 0, xpToNext: 100 },
+      { id: 'farming', name: '农耕', level: 1, xp: 0, xpToNext: 100 },
     ],
     shop: [
       { id: 'wooden-sword', name: '木剑', description: '简陋但实用的武器', price: 50 },
@@ -123,6 +123,30 @@ export function createInitialState(): GameState {
           { materials: [{ itemId: 'birch-wood', name: '桦木', amount: 18 }, { itemId: 'silver', name: '银矿', amount: 12 }], time: 5000 },
         ],
       },
+      {
+        id: 'farm',
+        name: '农场',
+        description: '种植作物，收获各类农产品',
+        level: 0,
+        maxLevel: 3,
+        levels: [
+          { materials: [{ itemId: 'oak-wood', name: '橡木', amount: 8 }, { itemId: 'copper', name: '铜矿', amount: 3 }], time: 3000 },
+          { materials: [{ itemId: 'pine-wood', name: '松木', amount: 12 }, { itemId: 'iron', name: '铁矿', amount: 6 }], time: 4500 },
+          { materials: [{ itemId: 'birch-wood', name: '桦木', amount: 18 }, { itemId: 'silver', name: '银矿', amount: 10 }], time: 6000 },
+        ],
+      },
+      {
+        id: 'kitchen',
+        name: '厨房',
+        description: '将农产品加工成可在酒馆出售的食物',
+        level: 0,
+        maxLevel: 3,
+        levels: [
+          { materials: [{ itemId: 'oak-wood', name: '橡木', amount: 10 }, { itemId: 'copper', name: '铜矿', amount: 5 }], time: 3500 },
+          { materials: [{ itemId: 'pine-wood', name: '松木', amount: 15 }, { itemId: 'iron', name: '铁矿', amount: 8 }], time: 5000 },
+          { materials: [{ itemId: 'birch-wood', name: '桦木', amount: 20 }, { itemId: 'silver', name: '银矿', amount: 12 }], time: 6500 },
+        ],
+      },
     ],
     buildingConstruction: null,
     tavernFood: [],
@@ -132,6 +156,8 @@ export function createInitialState(): GameState {
     lastSpawnTime: 0,
     activityLogs: [],
     gathering: null,
+    farmPlots: [],
+    processingSlots: [],
     guildHall: {
       formingParties: [],
       raidingParties: [],

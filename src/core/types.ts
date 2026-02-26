@@ -274,11 +274,41 @@ export interface ActivityLog {
   levelUp?: boolean;
 }
 
+export interface CropConfig {
+  id: string;
+  name: string;
+  description: string;
+  growthDuration: number;
+  levelRequired: number;
+  xpPerHarvest: number;
+  yieldItem: { id: string; name: string; description: string };
+  yieldQuantity: number;
+  requiredFarmLevel: number;
+}
+
+export type FarmPlotStatus = 'empty' | 'growing' | 'ready';
+
+export interface FarmPlot {
+  id: number;
+  status: FarmPlotStatus;
+  cropId: string | null;
+  plantTime: number | null;
+  growthDuration: number | null;
+}
+
 export interface GatheringState {
   skillId: 'woodcutting' | 'mining';
   nodeId: string;
   startTime: number;
   duration: number;
+}
+
+export interface ProcessingSlot {
+  id: number;
+  status: 'idle' | 'processing';
+  recipeId: string | null;
+  startTime: number | null;
+  processingTime: number | null;
 }
 
 export interface GameState {
@@ -295,6 +325,8 @@ export interface GameState {
   storeEquipment: EquipmentStock[];
   activityLogs: ActivityLog[];
   gathering: GatheringState | null;
+  farmPlots: FarmPlot[];
+  processingSlots: ProcessingSlot[];
   guildHall: GuildHallState;
   nextAdventurerIndex: number;
   lastSpawnTime: number;
